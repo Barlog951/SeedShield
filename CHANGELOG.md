@@ -1,3 +1,10 @@
+## [0.1.10](https://github.com/Barlog951/SeedShield/compare/v0.1.9...v0.1.10) (2024-12-31)
+
+
+### Bug Fixes
+
+* Fix scrolling logic and enhance input handling tests ([#7](https://github.com/Barlog951/SeedShield/issues/7)) ([8e94e71](https://github.com/Barlog951/SeedShield/commit/8e94e712ae57d1210712433a9745677f418d1b6f))
+
 ## [0.1.9](https://github.com/Barlog951/SeedShield/compare/v0.1.8...v0.1.9) (2024-12-31)
 
 
