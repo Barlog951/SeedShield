@@ -1,3 +1,10 @@
+## [0.1.8](https://github.com/Barlog951/SeedShield/compare/v0.1.7...v0.1.8) (2024-12-31)
+
+
+### Bug Fixes
+
+* Update semantic-release and dependabot configurations ([3fcbdd5](https://github.com/Barlog951/SeedShield/commit/3fcbdd53c743881e124f2624309375cbe640a179))
+
 ## [0.1.7](https://github.com/Barlog951/SeedShield/compare/v0.1.6...v0.1.7) (2024-12-31)
 
 ## [0.1.6](https://github.com/Barlog951/SeedShield/compare/v0.1.5...v0.1.6) (2024-12-31)

@@ -7,5 +7,5 @@ from .input_handler import InputHandler
 from .display_handler import DisplayHandler
 from .state_handler import StateHandler
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __all__ = ['SecureWordInterface', 'InputHandler', 'DisplayHandler', 'StateHandler']
