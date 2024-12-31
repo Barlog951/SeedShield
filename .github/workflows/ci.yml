@@ -148,6 +148,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install build & twine
+        run: pip install --upgrade pip build twine
+
       - name: Build package
         run: python -m build
 
@@ -191,7 +194,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/seedshield:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/seedshield:${{ github.ref_name }}
             ${{ secrets.DOCKERHUB_USERNAME }}/seedshield:${{ env.PACKAGE_VERSION }}
 
   vulnerabilities-notification:
