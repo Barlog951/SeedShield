@@ -1,31 +1,3 @@
-# Dependabot configuration
-dependabot:
-  version: 2
-  updates:
-    - package-ecosystem: "pip"
-      directory: "/"
-      schedule:
-        interval: "weekly"
-      reviewers:
-        - "Barlog951"
-      labels:
-        - "dependencies"
-        - "python"
-      commit-message:
-        prefix: "deps"
-
-    - package-ecosystem: "docker"
-      directory: "/"
-      schedule:
-        interval: "weekly"
-      reviewers:
-        - "Barlog951"
-      labels:
-        - "dependencies"
-        - "docker"
-      commit-message:
-        prefix: "docker"
-
 name: CI/CD
 
 on:
