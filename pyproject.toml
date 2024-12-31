@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=64.0", "wheel", "pytest", "pyperclip>=1.8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SeedShield"
+version = "0.1.3"
+readme = { file = "README.md", content-type = "text/markdown" }
+description = "Secure BIP39 word viewer with masking and reveal functionality"
+authors = [
+    {name = "Barlog951", email = "barlog951@gmail.com"}
+]
+requires-python = ">=3.6"
+dependencies = [
+    "pyperclip>=1.8.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Security",
+]
+
+[project.urls]
+"Documentation" = "https://github.com/Barlog951/SeedShield/blob/main/README.md"
+"Source Code" = "https://github.com/Barlog951/SeedShield"
+"Bug Tracker" = "https://github.com/Barlog951/SeedShield/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=6.0", "pytest-timeout>=2.1.0"]
+windows = ["windows-curses"]
+
+[project.scripts]
+seedshield = "seedshield.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "timeout: mark test with timeout value in seconds"
+]
