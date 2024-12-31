@@ -103,6 +103,8 @@ jobs:
       pull-requests: write
       issues: write
     if: github.ref == 'refs/heads/main'
+    outputs:
+      new-version: ${{ steps.get_new_version.outputs.NEW_VERSION }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -126,8 +128,8 @@ jobs:
           if [ -z "$(git tag)" ]; then
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
             git config --global user.name "github-actions[bot]"
-            git tag -a v0.1.0 -m "Initial release"
-            git push origin v0.1.0
+            git tag -a v0.0.1 -m "Initial release"
+            git push origin v0.0.1
           fi
 
       - name: Release
@@ -136,7 +138,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: npx semantic-release
 
-      - name: Get newly created tag
+      - name: Get new version
+        id: get_new_version
         run: |
           VERSION=$(git describe --tags --abbrev=0)
           echo "NEW_VERSION=$VERSION" >> $GITHUB_ENV
@@ -149,11 +152,14 @@ jobs:
       id-token: write
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
+      - name: Print new version
+        run: echo "Version is ${{ needs.release.outputs.new-version }}"
+
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          ref: "refs/tags/${{ env.NEW_VERSION }}"
+          ref: "refs/tags/${{ needs.release.outputs.new-version }}"
 
       - uses: actions/setup-python@v5
         with:
@@ -178,11 +184,14 @@ jobs:
       packages: write
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
+      - name: Print new version
+        run: echo "Version is ${{ needs.release.outputs.new-version }}"
+
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          ref: "refs/tags/${{ env.NEW_VERSION }}"
+          ref: "refs/tags/${{ needs.release.outputs.new-version }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
