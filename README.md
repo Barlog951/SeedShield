@@ -97,7 +97,7 @@ seedshield -i positions.txt
 ### Getting Started
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/seedshield.git
+git clone https://github.com/Barlog951/SeedShield.git
 
 # Setup development environment
 cd seedshield
@@ -112,8 +112,8 @@ pytest
 #### Building from Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/seedshield.git
-cd seedshield
+git clone https://github.com/Barlog951/SeedShield.git
+cd SeedShield
 
 # Build local image
 chmod +x build.sh

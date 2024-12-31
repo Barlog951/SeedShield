@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SeedShield"
-version = "0.1.3"
+version = "0.0.1"
 readme = { file = "README.md", content-type = "text/markdown" }
 description = "Secure BIP39 word viewer with masking and reveal functionality"
 authors = [
@@ -25,6 +25,9 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Security",
 ]
 
@@ -34,8 +37,19 @@ classifiers = [
 "Bug Tracker" = "https://github.com/Barlog951/SeedShield/issues"
 
 [project.optional-dependencies]
-test = ["pytest>=6.0", "pytest-timeout>=2.1.0"]
+test = [
+    "pytest>=6.0",
+    "pytest-timeout>=2.1.0",
+    "pytest-cov",
+    "pylint",
+    "flake8",
+    "mypy"
+]
 windows = ["windows-curses"]
+dev = [
+    "build",
+    "twine"
+]
 
 [project.scripts]
 seedshield = "seedshield.main:main"
@@ -46,3 +60,19 @@ python_files = ["test_*.py"]
 markers = [
     "timeout: mark test with timeout value in seconds"
 ]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+]
+
+[tool.flake8]
+max-line-length = 100
+exclude = [".git", "__pycache__", "build", "dist"]
+
+[tool.mypy]
+python_version = "0.0.1"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
