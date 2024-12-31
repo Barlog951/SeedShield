@@ -136,6 +136,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: npx semantic-release
 
+      - name: Get newly created tag
+        run: |
+          VERSION=$(git describe --tags --abbrev=0)
+          echo "NEW_VERSION=$VERSION" >> $GITHUB_ENV
+
   build-package:
     needs: [release, security-scan]
     runs-on: ubuntu-24.04
