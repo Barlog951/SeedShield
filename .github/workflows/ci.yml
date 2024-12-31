@@ -91,14 +91,9 @@ jobs:
           cache: 'pip'
 
       # Basic security checks
-      - name: Run security checks
-        run: |
-          # Scan dependencies for known vulnerabilities
-          pip install safety
-          safety scan
-
-          # Additional security tools can be added here
-          echo "Running additional security checks..."
+      - uses: pyupio/safety-action@v1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}
 
   release:
     needs: [test, security-scan]
