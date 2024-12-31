@@ -19,9 +19,20 @@ on:
   schedule:
     - cron: '0 0 * * 1'  # Weekly on Monday
 
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  security-events: write
+  packages: write
+  deployments: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,14 +61,18 @@ jobs:
           flake8 seedshield
           mypy seedshield
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Barlog951/SeedShield
 
   dependency-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/dependency-review-action@v3
@@ -70,6 +85,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      packages: write
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
@@ -90,14 +106,27 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'seedshield:scan'
-          format: 'sarif'
+          format: 'table,sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Verify SARIF file exists
+        run: |
+          if [ ! -f trivy-results.sarif ]; then
+            echo "SARIF file not found!"
+            exit 1
+          fi
+          echo "SARIF file exists and contains:"
+          cat trivy-results.sarif
 
       - name: Upload Trivy scan results
+        if: always()
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
+          wait-for-processing: true
 
       # Additional security checks can be added here
       - name: Run container security checks
@@ -108,6 +137,10 @@ jobs:
   release:
     needs: [test, security-scan]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -144,6 +177,9 @@ jobs:
   build-package:
     needs: [release, security-scan]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
@@ -162,11 +198,11 @@ jobs:
   build-docker:
     needs: [release, security-scan]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     permissions:
       contents: read
       packages: write
       security-events: write
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
 
@@ -201,6 +237,10 @@ jobs:
   vulnerabilities-notification:
     needs: [security-scan]
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+      security-events: read
     if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
     steps:
       - name: Create Issue
