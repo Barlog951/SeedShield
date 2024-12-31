@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write
@@ -66,7 +66,7 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   dependency-review:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -79,7 +79,7 @@ jobs:
 
   security-scan:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
@@ -93,16 +93,16 @@ jobs:
       # Basic security checks
       - name: Run security checks
         run: |
-          # Check dependencies for known vulnerabilities
+          # Scan dependencies for known vulnerabilities
           pip install safety
-          safety check
+          safety scan
 
           # Additional security tools can be added here
           echo "Running additional security checks..."
 
   release:
     needs: [test, security-scan]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
@@ -142,11 +142,11 @@ jobs:
 
   build-package:
     needs: [release, security-scan]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -163,7 +163,7 @@ jobs:
 
   build-docker:
     needs: [release, security-scan]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -201,7 +201,7 @@ jobs:
 
   vulnerabilities-notification:
     needs: [security-scan]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       issues: write
       contents: read
