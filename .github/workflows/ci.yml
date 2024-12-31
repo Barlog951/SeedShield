@@ -144,6 +144,11 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+          ref: "refs/tags/v${{ steps.semantic_release.outputs.newVersion }}"
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -168,6 +173,10 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+          ref: "refs/tags/v${{ steps.semantic_release.outputs.newVersion }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
