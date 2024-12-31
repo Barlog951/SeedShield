@@ -112,3 +112,28 @@ def test_get_display_state():
     cursor_pos, reached_last = handler.get_display_state()
     assert cursor_pos == 1
     assert reached_last is True
+
+
+def test_state_handler_handle_commands_reset():
+    handler = StateHandler()
+    positions = [1, 2, 3]
+    current_time = time.time()
+
+    # Test reset without reaching last
+    handler.reached_last = False
+    result = handler.handle_commands(ord('r'), positions, current_time)
+    assert result is None
+
+    # Test reset after reaching last
+    handler.reached_last = True
+    handler.handle_commands(ord('r'), positions, current_time)
+    assert handler.current_index == 0
+
+
+def test_state_handler_navigation_boundary():
+    handler = StateHandler()
+    positions = [1, 2]
+
+    # Test navigation at end of list
+    scroll = handler.handle_navigation(curses.KEY_DOWN, positions, 1, 1)
+    assert scroll == 1

@@ -451,5 +451,30 @@ def test_scroll_position_persistence():
         mock_stdscr, positions, scroll_position, visible_count, time.time())
     assert new_scroll == scroll_position
 
+def test_init_with_missing_file():
+    with pytest.raises(FileNotFoundError):
+        SecureWordInterface("nonexistent.txt")
+
+def test_process_input_with_no_positions():
+    mock_stdscr = MagicMock()
+    interface = SecureWordInterface()
+    result, scroll = interface._process_user_input(mock_stdscr, [], 0, 5, time.time())
+    assert result is True
+    assert scroll == 0
+
+def test_handle_commands_with_all_types():
+    interface = SecureWordInterface()
+    positions = [1, 2, 3]
+    current_time = time.time()
+
+    # Test 'n' command
+    reinit, new_pos, scroll = interface._handle_commands(ord('n'), positions, current_time, 0)
+    assert reinit is True
+    assert scroll == 0
+
+    # Test 'r' command
+    reinit, new_pos, scroll = interface._handle_commands(ord('r'), positions, current_time, 5)
+    assert scroll == 0
+
 if __name__ == "__main__":
     pytest.main([__file__])

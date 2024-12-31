@@ -51,7 +51,7 @@ jobs:
 
       - name: Run coverage
         run: |
-          pytest --cov=seedshield --cov-report term-missing --cov-report xml:coverage.xml
+          pytest --cov=seedshield --cov-report term-missing --cov-report xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
           coverage report --fail-under=85
 
       - name: Quality checks
@@ -64,6 +64,12 @@ jobs:
         uses: codecov/codecov-action@v3
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   dependency-review:
     runs-on: ubuntu-24.04
