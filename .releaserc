@@ -15,11 +15,28 @@
           { "type": "refactor", "release": "patch" },
           { "type": "perf", "release": "patch" },
           { "type": "python", "release": "patch" },
-          { "type": "test", "release": "patch" }
-        ]
+          { "type": "test", "release": "patch" },
+          { "type": "deps", "release": "patch" },
+          { "scope": "deps", "release": "patch" },
+          { "message": "*dependencies*", "release": "patch" }
+        ],
+        "parserOpts": {
+          "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"]
+        }
       }
     ],
-    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "angular",
+        "parserOpts": {
+          "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"]
+        },
+        "writerOpts": {
+          "commitsSort": ["subject", "scope"]
+        }
+      }
+    ],
     [
       "@semantic-release/exec",
       {
