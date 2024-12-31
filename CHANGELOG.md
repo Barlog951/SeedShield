@@ -1,3 +1,10 @@
+## [0.1.5](https://github.com/Barlog951/SeedShield/compare/v0.1.4...v0.1.5) (2024-12-31)
+
+
+### Bug Fixes
+
+* Use environment variable for version tag reference ([d69fbf8](https://github.com/Barlog951/SeedShield/commit/d69fbf8ce8bb46c089d1f47ec90376398f135bd7))
+
 ## [0.1.4](https://github.com/Barlog951/SeedShield/compare/v0.1.3...v0.1.4) (2024-12-31)
 
 
