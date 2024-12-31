@@ -131,6 +131,7 @@ jobs:
           fi
 
       - name: Release
+        id: semantic_release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: npx semantic-release
