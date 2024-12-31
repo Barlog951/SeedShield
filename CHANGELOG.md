@@ -1,3 +1,10 @@
+## [0.1.9](https://github.com/Barlog951/SeedShield/compare/v0.1.8...v0.1.9) (2024-12-31)
+
+
+### Bug Fixes
+
+* Update Dependabot config to use "fix(deps)" for prefixes ([3036ef9](https://github.com/Barlog951/SeedShield/commit/3036ef964e1809a27606381d0247048a4212d87f))
+
 ## [0.1.8](https://github.com/Barlog951/SeedShield/compare/v0.1.7...v0.1.8) (2024-12-31)
 
 
