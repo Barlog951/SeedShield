@@ -1,3 +1,10 @@
+## [0.1.3](https://github.com/Barlog951/SeedShield/compare/v0.1.2...v0.1.3) (2024-12-31)
+
+
+### Bug Fixes
+
+* Align .releaserc config with enhanced semantic-release setup ([ffff123](https://github.com/Barlog951/SeedShield/commit/ffff1230e0b1d7bc538c5bb6b047f6e3ae2e21be))
+
 ## [0.1.2](https://github.com/Barlog951/SeedShield/compare/v0.1.1...v0.1.2) (2024-12-31)
 
 
