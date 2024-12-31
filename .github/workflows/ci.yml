@@ -153,7 +153,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          ref: "refs/tags/v${{ steps.semantic_release.outputs.newVersion }}"
+          ref: "refs/tags/${{ env.NEW_VERSION }}"
 
       - uses: actions/setup-python@v5
         with:
@@ -182,7 +182,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          ref: "refs/tags/v${{ steps.semantic_release.outputs.newVersion }}"
+          ref: "refs/tags/${{ env.NEW_VERSION }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
