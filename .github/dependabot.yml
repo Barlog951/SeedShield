@@ -10,7 +10,9 @@ updates:
       - "dependencies"
       - "python"
     commit-message:
-      prefix: "deps"
+      prefix: "fix"
+      prefix-development: "chore"
+      scope: "deps"
     open-pull-requests-limit: 10
     rebase-strategy: "auto"
 
@@ -24,6 +26,8 @@ updates:
       - "dependencies"
       - "docker"
     commit-message:
-      prefix: "docker"
+      prefix: "fix"
+      prefix-development: "chore"
+      scope: "deps"
     open-pull-requests-limit: 10
     rebase-strategy: "auto"
