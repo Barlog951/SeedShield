@@ -468,12 +468,12 @@ def test_handle_commands_with_all_types():
     current_time = time.time()
 
     # Test 'n' command
-    reinit, new_pos, scroll = interface._handle_commands(ord('n'), positions, current_time, 0)
+    reinit, _, scroll = interface._handle_commands(ord('n'), positions, current_time, 0)
     assert reinit is True
     assert scroll == 0
 
     # Test 'r' command
-    reinit, new_pos, scroll = interface._handle_commands(ord('r'), positions, current_time, 5)
+    reinit, _, scroll = interface._handle_commands(ord('r'), positions, current_time, 5)
     assert scroll == 0
 
 if __name__ == "__main__":
