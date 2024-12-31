@@ -1,3 +1,10 @@
+## [0.1.2](https://github.com/Barlog951/SeedShield/compare/v0.1.1...v0.1.2) (2024-12-31)
+
+
+### Bug Fixes
+
+* Update release rules and improve CI pipeline setup ([0de0c6f](https://github.com/Barlog951/SeedShield/commit/0de0c6fe1bd493fff2cf596cd9331cd6f95fdd96))
+
 ## [0.1.1](https://github.com/Barlog951/SeedShield/compare/v0.1.0...v0.1.1) (2024-12-31)
 
 
