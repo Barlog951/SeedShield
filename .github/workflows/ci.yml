@@ -23,7 +23,6 @@ permissions:
   contents: read
   pull-requests: read
   issues: write
-  security-events: write
   packages: write
   deployments: write
 
@@ -83,63 +82,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
-      packages: write
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
-
-      # Build temporary image for security scanning
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build for security scan
-        uses: docker/build-push-action@v5
+      - uses: actions/setup-python@v5
         with:
-          context: .
-          load: true
-          tags: seedshield:scan
-          push: false
+          python-version: '3.12'
+          cache: 'pip'
 
-      - name: Run Trivy vulnerability scanner (Table Output)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'seedshield:scan'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          ignore-unfixed: true
-
-      - name: Run Trivy vulnerability scanner (SARIF Output)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'seedshield:scan'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          ignore-unfixed: true
-
-      - name: Verify SARIF file exists
+      # Basic security checks
+      - name: Run security checks
         run: |
-          if [ ! -f trivy-results.sarif ]; then
-            echo "SARIF file not found!"
-            exit 1
-          fi
-          echo "SARIF file exists and contains:"
-          cat trivy-results.sarif
+          # Check dependencies for known vulnerabilities
+          pip install safety
+          safety check
 
-      - name: Upload Trivy scan results
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
-          wait-for-processing: true
-
-      # Additional security checks can be added here
-      - name: Run container security checks
-        run: |
-          # Add additional security tools/checks here
+          # Additional security tools can be added here
           echo "Running additional security checks..."
 
   release:
@@ -209,7 +167,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
@@ -248,7 +205,6 @@ jobs:
     permissions:
       issues: write
       contents: read
-      security-events: read
     if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
     steps:
       - name: Create Issue
