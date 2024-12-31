@@ -1,3 +1,10 @@
+## [0.1.4](https://github.com/Barlog951/SeedShield/compare/v0.1.3...v0.1.4) (2024-12-31)
+
+
+### Bug Fixes
+
+* Enable fetching tags with PAT in CI workflows ([6ea1bce](https://github.com/Barlog951/SeedShield/commit/6ea1bce7ba6f0cdab32d1dfd07a3490f0a3d61f6))
+
 ## [0.1.3](https://github.com/Barlog951/SeedShield/compare/v0.1.2...v0.1.3) (2024-12-31)
 
 
