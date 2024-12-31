@@ -1,3 +1,10 @@
+## [0.1.11](https://github.com/Barlog951/SeedShield/compare/v0.1.10...v0.1.11) (2024-12-31)
+
+
+### Bug Fixes
+
+* Configure repository settings and add CODEOWNERS file ([802534e](https://github.com/Barlog951/SeedShield/commit/802534e1f266783c9b7d28049ee5684bfc13cec5))
+
 ## [0.1.10](https://github.com/Barlog951/SeedShield/compare/v0.1.9...v0.1.10) (2024-12-31)
 
 
