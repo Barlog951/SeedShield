@@ -1,3 +1,10 @@
+## [0.1.6](https://github.com/Barlog951/SeedShield/compare/v0.1.5...v0.1.6) (2024-12-31)
+
+
+### Bug Fixes
+
+* Enhance CI workflow with dynamic version handling ([8587138](https://github.com/Barlog951/SeedShield/commit/85871380672b323bf027f77c41966dd33c4c7560))
+
 ## [0.1.5](https://github.com/Barlog951/SeedShield/compare/v0.1.4...v0.1.5) (2024-12-31)
 
 
