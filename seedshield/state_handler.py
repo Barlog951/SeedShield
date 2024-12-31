@@ -39,9 +39,9 @@ class StateHandler:
             visible_count: Number of currently visible words
         """
         if c == curses.KEY_UP and scroll_position > 0:
-            return max(0, scroll_position - 1)
-        elif c == curses.KEY_DOWN:
-            return min(len(positions) - visible_count, scroll_position + 1)
+            return scroll_position - 1
+        elif c == curses.KEY_DOWN and scroll_position < len(positions) - visible_count:
+            return scroll_position + 1
         return scroll_position
 
     def handle_commands(self, c: int, positions: List[int], current_time: float) -> Optional[
@@ -72,3 +72,12 @@ class StateHandler:
 
     def get_display_state(self) -> Tuple[Optional[int], bool]:
         return self.cursor_pos, self.reached_last
+
+    def handle_scroll(self, positions: List[int], scroll_position: int, visible_count: int,
+                      direction: int) -> int:
+        """Handle scrolling navigation."""
+        if direction == curses.KEY_UP and scroll_position > 0:
+            return scroll_position - 1
+        elif direction == curses.KEY_DOWN and scroll_position < len(positions) - visible_count:
+            return scroll_position + 1
+        return scroll_position

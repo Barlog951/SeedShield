@@ -307,18 +307,18 @@ def test_update_display_state(mock_curses):
 
 @mark.timeout(5)
 def test_process_user_input_error(mock_curses):
-    """Test user input processing with curses error."""
+    """Test lines 140, 142: Curses error handling in input processing."""
     mock_stdscr = MagicMock()
     interface = SecureWordInterface()
     positions = [1, 2, 3]
     mock_stdscr.getch.side_effect = curses.error
 
     with patch('time.sleep') as mock_sleep:
-        result = interface._process_user_input(
+        result, scroll_pos = interface._process_user_input(
             mock_stdscr, positions, 0, 3, time.time())
-
-    assert result is True  # Should continue running
-    mock_sleep.assert_called_once_with(0.1)
+        assert result is True
+        assert scroll_pos == 0
+        mock_sleep.assert_called_once_with(0.1)
 
 
 @mark.timeout(5)
@@ -372,9 +372,10 @@ def test_process_user_input_curses_error(mock_curses):
     mock_stdscr.getch.side_effect = curses.error
 
     with patch('time.sleep') as mock_sleep:
-        result = interface._process_user_input(
+        result, scroll_pos = interface._process_user_input(
             mock_stdscr, positions, 0, 3, time.time())
-        assert result is True  # Should continue running
+        assert result is True
+        assert scroll_pos == 0
         mock_sleep.assert_called_once_with(0.1)
 
 
@@ -388,6 +389,92 @@ def test_input_mode_with_none_input(mock_curses):
         result = interface._handle_input_mode(mock_stdscr)
         assert result is None
         mock_stdscr.timeout.assert_not_called()  # Should not set timeout on None input
+
+@mark.timeout(5)
+def test_scrolling_up_down():
+    """Test scrolling with arrow keys."""
+    mock_stdscr = MagicMock()
+    interface = SecureWordInterface()
+    positions = list(range(1, 21))  # 20 positions
+    scroll_position = 5
+    visible_count = 7
+
+    # Test scroll down
+    _, new_scroll = interface._process_user_input(
+        mock_stdscr, positions, scroll_position, visible_count, time.time())
+    assert new_scroll == scroll_position
+
+    # Test scroll up
+    _, new_scroll = interface._process_user_input(
+        mock_stdscr, positions, scroll_position, visible_count, time.time())
+    assert new_scroll == scroll_position
+
+@mark.timeout(5)
+def test_scroll_boundaries():
+    """Test scrolling at list boundaries."""
+    mock_stdscr = MagicMock()
+    interface = SecureWordInterface()
+    positions = list(range(1, 11))  # 10 positions
+    visible_count = 5
+
+    # Test at top boundary
+    mock_stdscr.getch.return_value = curses.KEY_UP
+    _, new_scroll = interface._process_user_input(
+        mock_stdscr, positions, 0, visible_count, time.time())
+    assert new_scroll == 0
+
+    # Test at bottom boundary
+    mock_stdscr.getch.return_value = curses.KEY_DOWN
+    _, new_scroll = interface._process_user_input(
+        mock_stdscr, positions, 5, visible_count, time.time())
+    assert new_scroll == 5
+
+@mark.timeout(5)
+def test_scroll_position_persistence():
+    """Test scroll position persistence during different operations."""
+    mock_stdscr = MagicMock()
+    interface = SecureWordInterface()
+    positions = list(range(1, 15))  # 14 positions
+    scroll_position = 3
+    visible_count = 5
+
+    # Test scroll persistence after mouse event
+    mock_stdscr.getch.return_value = curses.KEY_MOUSE
+    mock_stdscr.getmouse.return_value = (0, 0, 2, 0, 0)
+    _, new_scroll = interface._process_user_input(
+        mock_stdscr, positions, scroll_position, visible_count, time.time())
+    assert new_scroll == scroll_position
+
+    # Test scroll persistence after sequential reveal
+    mock_stdscr.getch.return_value = ord('s')
+    _, new_scroll = interface._process_user_input(
+        mock_stdscr, positions, scroll_position, visible_count, time.time())
+    assert new_scroll == scroll_position
+
+def test_init_with_missing_file():
+    with pytest.raises(FileNotFoundError):
+        SecureWordInterface("nonexistent.txt")
+
+def test_process_input_with_no_positions():
+    mock_stdscr = MagicMock()
+    interface = SecureWordInterface()
+    result, scroll = interface._process_user_input(mock_stdscr, [], 0, 5, time.time())
+    assert result is True
+    assert scroll == 0
+
+def test_handle_commands_with_all_types():
+    interface = SecureWordInterface()
+    positions = [1, 2, 3]
+    current_time = time.time()
+
+    # Test 'n' command
+    reinit, _, scroll = interface._handle_commands(ord('n'), positions, current_time, 0)
+    assert reinit is True
+    assert scroll == 0
+
+    # Test 'r' command
+    reinit, _, scroll = interface._handle_commands(ord('r'), positions, current_time, 5)
+    assert scroll == 0
 
 if __name__ == "__main__":
     pytest.main([__file__])
