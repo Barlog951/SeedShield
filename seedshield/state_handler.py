@@ -138,7 +138,9 @@ class StateHandler:
         if positions:
             self.current_index = 0
 
-    def handle_commands(self, key: int, positions: List[int], current_time: float) -> Optional[List[int]]:
+    def handle_commands(
+            self, key: int, positions: List[int], current_time: float
+    ) -> Optional[List[int]]:
         """
         Process user commands and update state accordingly.
 

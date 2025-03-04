@@ -10,6 +10,7 @@ from typing import List, Optional, Any
 
 from .config import logger, MASK_CHARACTER, MASK_LENGTH
 from .config import SCROLL_INDICATOR_UP, SCROLL_INDICATOR_DOWN, MENU_TEXT
+from .state_handler import StateHandler
 
 
 class DisplayHandler:
@@ -35,6 +36,7 @@ class DisplayHandler:
         self.ui_manager = ui_manager
         self.mask = MASK_CHARACTER * MASK_LENGTH
         self.legacy_mask = self.mask  # For backward compatibility with tests
+        self.state_handler: Optional[StateHandler] = None  # Will be set later
 
         # Store the last state to optimize rendering
         self._last_height = 0
@@ -42,8 +44,10 @@ class DisplayHandler:
 
         logger.debug("DisplayHandler initialized with %s words", len(words))
 
-    def _add_scroll_indicators(self, stdscr: Any, visible_start: int, visible_end: int,
-                             positions: List[int], height: int, width: int) -> None:
+    def _add_scroll_indicators(
+            self, stdscr: Any, visible_start: int, visible_end: int,
+            positions: List[int], height: int, width: int
+    ) -> None:
         """
         Add scroll indicators to the display if needed.
 
@@ -94,6 +98,7 @@ class DisplayHandler:
 
             # Show reset option only if we've reached the last word
             menu_text = MENU_TEXT["with_reset"] if is_last_reached else MENU_TEXT["standard"]
+            # We no longer show the wordlist info on any screen to avoid blocking words
 
             # Split menu text across lines if it's too long
             if len(menu_text) > self._last_width - 2:
@@ -168,8 +173,10 @@ class DisplayHandler:
         logger.warning("Invalid word position: %s", pos)
         return f"INVALID({pos})"
 
-    def display_words(self, stdscr: Any, positions: List[int], scroll_position: int,
-                    cursor_pos: Optional[int], is_last_reached: bool) -> int:
+    def display_words(
+            self, stdscr: Any, positions: List[int], scroll_position: int,
+            cursor_pos: Optional[int], is_last_reached: bool
+    ) -> int:
         """
         Display words with masking in the terminal interface.
 
@@ -213,10 +220,12 @@ class DisplayHandler:
         result: int = visible_end - visible_start
         return result
 
-    def _display_visible_words(self, stdscr: Any, positions: List[int],
-                              visible_start: int, visible_end: int,
-                              scroll_position: int, cursor_pos: Optional[int],
-                              height: int, width: int) -> None:
+    def _display_visible_words(
+            self, stdscr: Any, positions: List[int],
+            visible_start: int, visible_end: int,
+            scroll_position: int, cursor_pos: Optional[int],
+            height: int, width: int
+    ) -> None:
         """
         Display the visible words on the screen.
 

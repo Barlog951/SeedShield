@@ -187,6 +187,50 @@ class InputHandler:
             logger.error("Unexpected error reading positions file: %s", str(e))
             return None
 
+    def _display_error(self, stdscr: Any, message: str, error: Optional[Exception] = None) -> None:
+        """
+        Display an error message on the screen.
+
+        Args:
+            stdscr: Curses window object
+            message: Error message to display
+            error: Optional exception to log
+        """
+        if error:
+            logger.error("%s: %s", message, str(error))
+        stdscr.addstr(6, 0, message)
+        stdscr.refresh()
+        time.sleep(1)
+
+    def _process_input_command(self, stdscr: Any, input_str: str) -> Optional[List[int]]:
+        """
+        Process a specific input command.
+
+        Args:
+            stdscr: Curses window object
+            input_str: User input string
+
+        Returns:
+            Optional[List[int]]: Processed positions or None
+        """
+        # Handle quitting
+        if input_str == 'q':
+            return None
+
+        # Handle clipboard input
+        if input_str == 'v':
+            return self.process_clipboard_input(stdscr)
+
+        # Handle individual number
+        validated_input = self.validate_number_input(input_str)
+        if validated_input:
+            return validated_input
+
+        # Invalid input
+        err_msg = f"Invalid input. Please enter a number between 1-{self.word_count}"
+        self._display_error(stdscr, err_msg)
+        return []  # Empty list indicates continuing input loop
+
     def get_input(self, stdscr: Any) -> Optional[List[int]]:
         """
         Get user input, validating it and handling different input types.
@@ -198,45 +242,30 @@ class InputHandler:
             Optional[List[int]]: List of valid position numbers or None for quit command
         """
         while True:
+            # Clear any previous error messages
+            stdscr.move(6, 0)
+            stdscr.clrtoeol()
             self.display_input_prompt(stdscr)
             curses.echo()
 
             try:
                 input_str = stdscr.getstr().decode('utf-8').strip().lower()
+                # Skip empty input
+                if not input_str:
+                    continue
 
-                # Handle quitting
-                if input_str == 'q':
+                result = self._process_input_command(stdscr, input_str)
+                # None means quit, empty list means continue, otherwise return the result
+                if result is None:
                     return None
-
-                # Handle clipboard input
-                if input_str == 'v':
-                    clipboard_numbers = self.process_clipboard_input(stdscr)
-                    if clipboard_numbers:
-                        return clipboard_numbers
-
-                # Handle individual number
-                validated_input = self.validate_number_input(input_str)
-                if validated_input:
-                    return validated_input
-
-                stdscr.addstr(6, 0, f"Invalid input. Please enter a number between 1-{self.word_count}")
-                stdscr.refresh()
-                time.sleep(1)
+                if result:  # Non-empty list
+                    return result
 
             except UnicodeDecodeError as e:
-                logger.error("Unicode decode error: %s", str(e))
-                stdscr.addstr(6, 0, "Invalid character input")
-                stdscr.refresh()
-                time.sleep(1)
+                self._display_error(stdscr, "Invalid character input", e)
             except ValueError as e:
-                logger.error("Value error: %s", str(e))
-                stdscr.addstr(6, 0, "Invalid input format")
-                stdscr.refresh()
-                time.sleep(1)
+                self._display_error(stdscr, "Invalid input format", e)
             except Exception as e:
-                logger.error("Unexpected input error: %s", str(e))
-                stdscr.addstr(6, 0, "Error processing input")
-                stdscr.refresh()
-                time.sleep(1)
+                self._display_error(stdscr, "Error processing input", e)
             finally:
                 curses.noecho()

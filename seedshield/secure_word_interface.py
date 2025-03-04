@@ -45,6 +45,8 @@ class SecureWordInterface:
         self.input_handler = InputHandler(len(self.words), self.ui_manager)
         self.display_handler = DisplayHandler(self.words, self.ui_manager)
         self.state_handler = StateHandler()
+        # Set state_handler reference in display_handler
+        self.display_handler.state_handler = self.state_handler
 
         # For backward compatibility with tests
         self._initialize_curses = self.ui_manager.initialize
@@ -179,8 +181,10 @@ class SecureWordInterface:
 
         return should_reinit, new_positions, new_scroll
 
-    def _process_user_input(self, stdscr: Any, positions: List[int], scroll_position: int,
-                          visible_count: int, current_time: float) -> Tuple[bool, int]:
+    def _process_user_input(
+            self, stdscr: Any, positions: List[int], scroll_position: int,
+            visible_count: int, current_time: float
+    ) -> Tuple[bool, int]:
         """
         Process user input and update state accordingly.
 
@@ -206,6 +210,8 @@ class SecureWordInterface:
                 # Handle timeout adjustment for input mode
                 if should_reinit:
                     stdscr.timeout(10000)
+                    # Clear positions to force entering input mode on next loop
+                    positions.clear()
 
                 # Handle quit command
                 if should_quit:
@@ -309,9 +315,10 @@ class SecureWordInterface:
         except Exception as e:
             logger.debug("Error handling mouse event: %s", str(e))
 
-    def _handle_user_input(self, c: int, positions: List[int], scroll_position: int,
-                         visible_count: int, current_time: float
-                         ) -> Tuple[bool, bool, int, List[int]]:
+    def _handle_user_input(
+            self, c: int, positions: List[int], scroll_position: int,
+            visible_count: int, current_time: float
+    ) -> Tuple[bool, bool, int, List[int]]:
         """
         Process a single user input and determine actions.
 
@@ -353,11 +360,11 @@ class SecureWordInterface:
     def _get_load_positions_func(self) -> Callable[[str], Optional[List[int]]]:
         """Return a function that loads positions from a file."""
         return self.input_handler.load_positions_from_file
-        
+
     def _get_handle_autoscroll_func(self) -> Callable[[Optional[int], int, int], int]:
         """Return a function that handles autoscrolling."""
         return self.display_handler.handle_autoscroll
-        
+
     def _load_positions_file(self, file_path: str) -> List[int]:
         """
         Load word positions from a file.
