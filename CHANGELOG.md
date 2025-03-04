@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/Barlog951/SeedShield/compare/v0.2.0...v0.2.1) (2025-03-04)
+
+
+### Bug Fixes
+
+* Refactor test imports and update build process. ([#9](https://github.com/Barlog951/SeedShield/issues/9)) ([ffbb0b4](https://github.com/Barlog951/SeedShield/commit/ffbb0b46c07ae94d4588856c249b4d6f79e65beb))
+
 # [0.2.0](https://github.com/Barlog951/SeedShield/compare/v0.1.11...v0.2.0) (2025-03-04)
 
 
