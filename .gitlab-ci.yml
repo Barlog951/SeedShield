@@ -67,6 +67,7 @@ build:docker:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
     - docker info
+    - apk add --no-cache grep
   script:
     - chmod +x build.sh
     - sh build.sh

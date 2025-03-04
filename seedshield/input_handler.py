@@ -1,7 +1,19 @@
+"""
+Input handling for the SeedShield application.
+
+This module processes and validates user input from various sources,
+including keyboard, clipboard, and files.
+"""
+
 import curses
 import time
-import pyperclip
-from typing import List, Optional
+import os
+from typing import List, Optional, Any
+
+import pyperclip  # type: ignore
+
+from .config import logger
+from .secure_memory import secure_clipboard_clear
 
 
 class InputHandler:
@@ -9,28 +21,18 @@ class InputHandler:
     Handles user input processing and validation for the secure word interface.
     """
 
-    def __init__(self, word_count: int):
+    def __init__(self, word_count: int, ui_manager: Any = None) -> None:
         """
         Initialize the input handler.
 
         Args:
             word_count: Total number of available words
+            ui_manager: UI manager instance for rendering
         """
         self.word_count = word_count
+        self.ui_manager = ui_manager
 
-    def _clear_clipboard(self) -> None:
-        """
-        Safely clear clipboard contents.
-
-        Attempts to clear the clipboard by setting it to an empty string.
-        Fails silently if clipboard access is not available.
-        """
-        try:
-            pyperclip.copy('')
-        except Exception:
-            pass
-
-    def display_input_prompt(self, stdscr) -> None:
+    def display_input_prompt(self, stdscr: Any) -> None:
         """
         Display input instructions to the user.
 
@@ -45,7 +47,17 @@ class InputHandler:
         stdscr.addstr(5, 0, "> ")
         stdscr.refresh()
 
-    def process_clipboard_input(self, stdscr) -> Optional[List[int]]:
+    # For backward compatibility with tests
+    def _clear_clipboard(self) -> None:
+        """
+        Safely clear clipboard contents.
+
+        Attempts to clear the clipboard by setting it to an empty string.
+        Fails silently if clipboard access is not available.
+        """
+        secure_clipboard_clear()
+
+    def process_clipboard_input(self, stdscr: Any) -> Optional[List[int]]:
         """
         Process and validate input from the clipboard.
 
@@ -55,25 +67,44 @@ class InputHandler:
         Returns:
             Optional[List[int]]: List of valid position numbers, or None if no valid numbers found
         """
-        content = pyperclip.paste()
-        numbers = []
-        for line in content.splitlines():
-            try:
-                num = int(line.strip())
-                if 1 <= num <= self.word_count:
-                    numbers.append(num)
-            except ValueError:
-                continue
+        try:
+            content = pyperclip.paste()
+            numbers = []
 
-        self._clear_clipboard()
+            # Process each line in the clipboard content
+            for line in content.splitlines():
+                try:
+                    num = int(line.strip())
+                    if 1 <= num <= self.word_count:
+                        numbers.append(num)
+                except ValueError:
+                    continue
 
-        if numbers:
-            stdscr.addstr(6, 0, f"Found {len(numbers)} valid numbers")
+            # Securely clear the clipboard
+            if not secure_clipboard_clear():
+                logger.warning("Failed to securely clear clipboard")
+
+            # Provide feedback based on processing results
+            if numbers:
+                stdscr.addstr(6, 0, f"Found {len(numbers)} valid numbers")
+                stdscr.refresh()
+                time.sleep(1)
+                return numbers
+
+            stdscr.addstr(6, 0, "No valid numbers found in clipboard")
             stdscr.refresh()
             time.sleep(1)
-            return numbers
-        else:
-            stdscr.addstr(6, 0, "No valid numbers found in clipboard")
+            return None
+
+        except (pyperclip.PyperclipException, ValueError) as e:
+            logger.error("Error processing clipboard: %s", str(e))
+            stdscr.addstr(6, 0, "Error processing clipboard data")
+            stdscr.refresh()
+            time.sleep(1)
+            return None
+        except Exception as e:
+            logger.error("Unexpected clipboard error: %s", str(e))
+            stdscr.addstr(6, 0, "Unexpected error with clipboard")
             stdscr.refresh()
             time.sleep(1)
             return None
@@ -93,10 +124,70 @@ class InputHandler:
             num = int(input_str)
             if 1 <= num <= self.word_count:
                 return [num]
+
+            logger.debug("Input number %s out of valid range (1-%s)", num, self.word_count)
         except ValueError:
+            logger.debug("Invalid non-integer input: %s", input_str)
+        return None
+
+    def load_positions_from_file(self, file_path: str) -> Optional[List[int]]:
+        """
+        Load position numbers from a file with security validation.
+
+        Args:
+            file_path: Path to the file containing position numbers
+
+        Returns:
+            Optional[List[int]]: List of valid position numbers or None if error
+        """
+        # Security check: validate file path
+        if not os.path.exists(file_path):
+            logger.error("File not found: %s", file_path)
             return None
 
-    def get_input(self, stdscr) -> Optional[List[int]]:
+        if not os.path.isfile(file_path):
+            logger.error("Not a file: %s", file_path)
+            return None
+
+        try:
+            # Check read permissions
+            if not os.access(file_path, os.R_OK):
+                logger.error("No read permission for file: %s", file_path)
+                return None
+
+            positions = []
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line or not line.isdigit():
+                        logger.warning("Skipping invalid content at line %s: '%s'", line_num, line)
+                        continue
+
+                    num = int(line)
+                    if 1 <= num <= self.word_count:
+                        positions.append(num)
+                    else:
+                        logger.warning(
+                            "Skipping out-of-range number at line %s: %s "
+                            "(valid range: 1-%s)", line_num, num, self.word_count
+                        )
+
+            if not positions:
+                logger.warning("No valid position numbers found in file: %s", file_path)
+
+            return positions
+
+        except IOError as e:
+            logger.error("I/O error reading positions file: %s", str(e))
+            return None
+        except ValueError as e:
+            logger.error("Value error in positions file: %s", str(e))
+            return None
+        except Exception as e:
+            logger.error("Unexpected error reading positions file: %s", str(e))
+            return None
+
+    def get_input(self, stdscr: Any) -> Optional[List[int]]:
         """
         Get user input, validating it and handling different input types.
 
@@ -118,16 +209,34 @@ class InputHandler:
                     return None
 
                 # Handle clipboard input
-                elif input_str == 'v':
+                if input_str == 'v':
                     clipboard_numbers = self.process_clipboard_input(stdscr)
                     if clipboard_numbers:
                         return clipboard_numbers
 
                 # Handle individual number
-                else:
-                    validated_input = self.validate_number_input(input_str)
-                    if validated_input:
-                        return validated_input
+                validated_input = self.validate_number_input(input_str)
+                if validated_input:
+                    return validated_input
 
+                stdscr.addstr(6, 0, f"Invalid input. Please enter a number between 1-{self.word_count}")
+                stdscr.refresh()
+                time.sleep(1)
+
+            except UnicodeDecodeError as e:
+                logger.error("Unicode decode error: %s", str(e))
+                stdscr.addstr(6, 0, "Invalid character input")
+                stdscr.refresh()
+                time.sleep(1)
+            except ValueError as e:
+                logger.error("Value error: %s", str(e))
+                stdscr.addstr(6, 0, "Invalid input format")
+                stdscr.refresh()
+                time.sleep(1)
+            except Exception as e:
+                logger.error("Unexpected input error: %s", str(e))
+                stdscr.addstr(6, 0, "Error processing input")
+                stdscr.refresh()
+                time.sleep(1)
             finally:
                 curses.noecho()

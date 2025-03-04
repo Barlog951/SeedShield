@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 IMAGE_NAME="seedshield"
-VERSION=$(cat seedshield/__init__.py | grep -o '[0-9]*\.[0-9]*\.[0-9]*')
+VERSION=$(grep -o 'VERSION = "[0-9]*\.[0-9]*\.[0-9]*"' seedshield/config.py | grep -o '[0-9]*\.[0-9]*\.[0-9]*')
 
 # Build the image
 echo "Building Docker image ${IMAGE_NAME}:${VERSION}..."

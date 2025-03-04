@@ -7,7 +7,7 @@ from tests.test_fixtures import mock_stdscr
 def test_display_handler_init():
     handler = DisplayHandler(["word1", "word2"])
     assert handler.words == ["word1", "word2"]
-    assert handler.MASK == "*****"
+    assert handler.legacy_mask == "*****"
 
 
 def test_calculate_visible_range():
