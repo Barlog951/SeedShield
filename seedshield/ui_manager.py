@@ -39,6 +39,21 @@ class UIManager:
             # If we're given a mock screen (for testing), use it
             if mock_stdscr is not None:
                 self.stdscr = mock_stdscr
+                
+                # Still set up basic terminal settings for mock screen
+                self.stdscr.keypad(True)
+                
+                # Set timeout based on terminal type
+                if sys.stdin.isatty():
+                    # Set halfdelay mode for TTY with 0.1 second timeout (10 deciseconds)
+                    # This is equivalent to 100ms but uses curses' halfdelay mode
+                    curses.halfdelay(1)
+                else:
+                    # For non-TTY mode (like pipes/redirects), use regular timeout
+                    self.stdscr.timeout(100)
+                
+                # Initialize size variables
+                self.update_dimensions()
                 return
             
             self.stdscr = curses.initscr()

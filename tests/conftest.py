@@ -14,20 +14,44 @@ import curses
 # Add a fixture to mock curses for tests
 @pytest.fixture
 def mock_curses():
+    """Mock the curses module for testing."""
     mock = MagicMock()
     mock.KEY_UP = 259
     mock.KEY_DOWN = 258
     mock.KEY_MOUSE = 409
     mock.error = curses.error
     mock.halfdelay = MagicMock()
+    mock.echo = MagicMock()
+    mock.noecho = MagicMock()
+    mock.endwin = MagicMock()
+    mock.cbreak = MagicMock()
+    mock.nocbreak = MagicMock()
+    mock.A_REVERSE = 65536
+    mock.mousemask = MagicMock()
+    mock.ALL_MOUSE_EVENTS = 0xFFF
+    mock.REPORT_MOUSE_POSITION = 0x1000
+    mock.getmouse = MagicMock(return_value=(0, 10, 5, 0, 0))
     
-    with patch('curses.start_color'), \
+    # Create these attributes for compatibility
+    mock.COLORS = 8
+    mock.COLOR_PAIRS = 64
+    
+    with patch('curses.initscr', return_value=mock), \
+         patch('curses.start_color'), \
          patch('curses.init_pair'), \
          patch('curses.COLOR_WHITE', 0), \
          patch('curses.COLOR_BLACK', 0), \
-         patch('curses.COLORS', 8), \
-         patch('curses.COLOR_PAIRS', 64), \
-         patch('curses.halfdelay', mock.halfdelay):
+         patch('curses.halfdelay', mock.halfdelay), \
+         patch('curses.echo', mock.echo), \
+         patch('curses.noecho', mock.noecho), \
+         patch('curses.endwin', mock.endwin), \
+         patch('curses.cbreak', mock.cbreak), \
+         patch('curses.nocbreak', mock.nocbreak), \
+         patch('curses.mousemask', mock.mousemask), \
+         patch('curses.getmouse', mock.getmouse), \
+         patch('curses.ALL_MOUSE_EVENTS', mock.ALL_MOUSE_EVENTS), \
+         patch('curses.REPORT_MOUSE_POSITION', mock.REPORT_MOUSE_POSITION), \
+         patch('curses.A_REVERSE', mock.A_REVERSE):
         yield mock
 
 # Create a fixture for a mocked curses screen
