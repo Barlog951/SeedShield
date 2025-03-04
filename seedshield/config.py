@@ -12,7 +12,7 @@ import sys
 
 # Application constants
 APP_NAME = "SeedShield"
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 
 # Security settings
 REVEAL_TIMEOUT = 3  # Seconds before auto-hiding revealed words

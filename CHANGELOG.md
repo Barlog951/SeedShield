@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/Barlog951/SeedShield/compare/v0.2.1...v0.2.2) (2025-03-04)
+
+
+### Bug Fixes
+
+* Refactor input handling and integrate state management. ([23332a7](https://github.com/Barlog951/SeedShield/commit/23332a7b7f9dbb547dc39f489a1a35cc2aaa573f))
+
 ## [0.2.1](https://github.com/Barlog951/SeedShield/compare/v0.2.0...v0.2.1) (2025-03-04)
 
 
