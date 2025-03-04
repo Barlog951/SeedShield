@@ -5,8 +5,7 @@ import pytest
 from pytest import mark
 from unittest.mock import patch, Mock, MagicMock
 from seedshield.secure_word_interface import SecureWordInterface
-from tests.test_fixtures import mock_stdscr, test_wordlist, test_positions, \
-    mock_curses
+# Test fixtures are imported from root conftest.py
 
 
 def test_interface_initialization(test_wordlist):
