@@ -131,19 +131,23 @@ docker run -it --rm seedshield
 Note: Built image contains minimal dependencies and runs as non-root user for security.
 
 ### Technical Architecture
-- Python 3.6+ with type hints
-- Comprehensive test suite (90% coverage)
-- Automated security scanning
-- Platform-agnostic clipboard handling
-- Curses-based terminal interface
-- Modular design with separate secure interface
+- Python 3.6+ with type hints throughout the codebase
+- Comprehensive test suite (73% coverage) with security-focused tests
+- Platform-agnostic clipboard handling for cross-platform compatibility
+- Curses-based terminal interface with proper initialization and cleanup
+- Fully modular design with clean component separation
+- Adaptive handling for TTY and non-TTY environments
+- Secure memory operations with explicit cleanup
 
 ### Code Organization
 - `main.py` - Entry point and argument handling
 - `secure_word_interface.py` - Core interface coordination
-- `input_handler.py` - Secure input processing
+- `input_handler.py` - Secure input processing and validation
 - `display_handler.py` - UI rendering and masking
-- `state_handler.py` - State management and security
+- `state_handler.py` - State management and security timeouts
+- `ui_manager.py` - Terminal UI abstraction layer
+- `secure_memory.py` - Secure memory handling functions
+- `config.py` - Configuration settings and constants
 - `tests/` - Comprehensive test suite
 - `data/` - Default wordlists
 

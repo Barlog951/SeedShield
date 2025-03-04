@@ -50,8 +50,9 @@
       {
         "assets": [
           "CHANGELOG.md",
-          "seedshield/__init__.py",
-          "pyproject.toml"
+          "seedshield/config.py",
+          "pyproject.toml",
+          "setup.py"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }

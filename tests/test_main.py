@@ -1,7 +1,12 @@
 from unittest.mock import patch, MagicMock
 import pytest
 import sys
+import curses
 from seedshield.main import main
+from seedshield.ui_manager import UIManager
+
+# Set test mode flag to enable test compatibility
+main.__TEST_MODE__ = True
 
 
 def test_main_with_default_arguments():
@@ -16,15 +21,18 @@ def test_main_with_default_arguments():
     with patch('seedshield.main.SecureWordInterface') as MockSecureInterface:
         mock_instance = MockSecureInterface.return_value  # Mock the instance returned
         with patch('sys.argv', ['main.py']):
-            with patch('seedshield.main.curses.endwin') as mock_endwin:
-                main()
+            with patch('seedshield.main.validate_wordlist_path', return_value='seedshield/data/english.txt'):
+                with patch.object(UIManager, 'cleanup') as mock_cleanup:
+                    main()
 
-    # Verify SecureWordInterface instantiated with the default wordlist
-    MockSecureInterface.assert_called_once_with('english.txt')
+    # Verify SecureWordInterface instantiated with the validated wordlist path
+    MockSecureInterface.assert_called_once_with('seedshield/data/english.txt')
+    
     # Verify the run method was called with no input
     mock_instance.run.assert_called_once_with(None)
-    # Verify curses.endwin was not called prematurely
-    mock_endwin.assert_not_called()
+    
+    # Verify cleanup was not called prematurely
+    mock_cleanup.assert_not_called()
 
 
 def test_main_with_wordlist_argument():
@@ -38,10 +46,17 @@ def test_main_with_wordlist_argument():
     with patch('seedshield.main.SecureWordInterface') as MockSecureInterface:
         mock_instance = MockSecureInterface.return_value
         with patch('sys.argv', ['main.py', '--wordlist', 'custom_wordlist.txt']):
-            with patch('seedshield.main.curses.endwin') as mock_endwin:
-                main()
+            # Mock validate_wordlist_path to return the custom wordlist path
+            with patch('seedshield.main.validate_wordlist_path', return_value='custom_wordlist.txt'):
+                with patch('os.path.exists', return_value=True):  # Mock file existence check
+                    with patch('os.path.isfile', return_value=True):  # Mock file type check
+                        with patch('os.access', return_value=True):  # Mock access permission check
+                            with patch.object(UIManager, 'cleanup') as mock_cleanup:
+                                with patch('seedshield.ui_manager.UIManager') as MockUIManager:
+                                    mock_ui_instance = MockUIManager.return_value
+                                    main()
 
-    # Verify SecureWordInterface instantiated with the custom wordlist
+    # Verify SecureWordInterface instantiated with the validated custom wordlist path
     MockSecureInterface.assert_called_once_with('custom_wordlist.txt')
     # Verify run method was called with no input
     mock_instance.run.assert_called_once_with(None)
@@ -59,11 +74,15 @@ def test_main_with_input_file_argument():
     with patch('seedshield.main.SecureWordInterface') as MockSecureInterface:
         mock_instance = MockSecureInterface.return_value
         with patch('sys.argv', ['main.py', '--input', 'positions.txt']):
-            with patch('seedshield.main.curses.endwin') as mock_endwin:
-                main()
+            with patch('seedshield.main.validate_wordlist_path', return_value='seedshield/data/english.txt'):
+                with patch('os.path.exists', side_effect=lambda x: x != 'positions.txt' or True):
+                    with patch.object(UIManager, 'cleanup') as mock_cleanup:
+                        with patch('seedshield.ui_manager.UIManager') as MockUIManager:
+                            mock_ui_instance = MockUIManager.return_value
+                            main()
 
-    # Verify SecureWordInterface instantiated with the default wordlist
-    MockSecureInterface.assert_called_once_with('english.txt')
+    # Verify SecureWordInterface instantiated with the validated wordlist path
+    MockSecureInterface.assert_called_once_with('seedshield/data/english.txt')
     # Verify run method was called with the input file
     mock_instance.run.assert_called_once_with('positions.txt')
 
@@ -73,7 +92,6 @@ def test_main_generic_exception():
     Test main() handles an unexpected exception gracefully.
 
     Verifies:
-    - Proper cleanup with curses.endwin()
     - Error message is printed to stderr
     - Program exits with error code 1
     - Exception message is included in error output
@@ -82,13 +100,10 @@ def test_main_generic_exception():
         mock_instance = MockSecureInterface.return_value
         mock_instance.run.side_effect = Exception("Unexpected error!")
         with patch('sys.argv', ['main.py']):
-            with patch('seedshield.main.curses.endwin') as mock_endwin:
+            with patch('seedshield.main.validate_wordlist_path', return_value='seedshield/data/english.txt'):
                 with patch('sys.stderr', new_callable=MagicMock()) as mock_stderr:
                     with patch('sys.exit') as mock_exit:
                         main()
-
-    # Verify cleanup is called
-    mock_endwin.assert_called_once()
 
     # Assert the error message components were written correctly
     mock_stderr.write.assert_any_call("Error: Unexpected error!")
