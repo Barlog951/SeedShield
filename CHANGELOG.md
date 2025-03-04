@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/Barlog951/SeedShield/compare/v0.1.11...v0.2.0) (2025-03-04)
+
+
+### Features
+
+* Refactor test suite and enhance core modules  ([#8](https://github.com/Barlog951/SeedShield/issues/8)) ([c6d6924](https://github.com/Barlog951/SeedShield/commit/c6d692471fb4bf29be28a3f513d8e72d21863b4c))
+
 ## [0.1.11](https://github.com/Barlog951/SeedShield/compare/v0.1.10...v0.1.11) (2024-12-31)
 
 
