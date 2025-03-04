@@ -3,7 +3,6 @@ import pytest
 import pyperclip
 from unittest.mock import patch, MagicMock
 from seedshield.input_handler import InputHandler
-from tests.test_fixtures import mock_stdscr, test_wordlist, test_positions
 
 
 def test_input_handler_init():
