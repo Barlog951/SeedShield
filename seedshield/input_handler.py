@@ -70,7 +70,7 @@ class InputHandler:
         try:
             content = pyperclip.paste()
             numbers = []
-            
+
             # Process each line in the clipboard content
             for line in content.splitlines():
                 try:
@@ -79,26 +79,32 @@ class InputHandler:
                         numbers.append(num)
                 except ValueError:
                     continue
-    
+
             # Securely clear the clipboard
             if not secure_clipboard_clear():
                 logger.warning("Failed to securely clear clipboard")
-    
+
             # Provide feedback based on processing results
             if numbers:
                 stdscr.addstr(6, 0, f"Found {len(numbers)} valid numbers")
                 stdscr.refresh()
                 time.sleep(1)
                 return numbers
-            
+
             stdscr.addstr(6, 0, "No valid numbers found in clipboard")
             stdscr.refresh()
             time.sleep(1)
             return None
-            
-        except Exception as e:
+
+        except (pyperclip.PyperclipException, ValueError) as e:
             logger.error("Error processing clipboard: %s", str(e))
             stdscr.addstr(6, 0, "Error processing clipboard data")
+            stdscr.refresh()
+            time.sleep(1)
+            return None
+        except Exception as e:
+            logger.error("Unexpected clipboard error: %s", str(e))
+            stdscr.addstr(6, 0, "Unexpected error with clipboard")
             stdscr.refresh()
             time.sleep(1)
             return None
@@ -118,7 +124,7 @@ class InputHandler:
             num = int(input_str)
             if 1 <= num <= self.word_count:
                 return [num]
-            
+
             logger.debug("Input number %s out of valid range (1-%s)", num, self.word_count)
         except ValueError:
             logger.debug("Invalid non-integer input: %s", input_str)
@@ -127,10 +133,10 @@ class InputHandler:
     def load_positions_from_file(self, file_path: str) -> Optional[List[int]]:
         """
         Load position numbers from a file with security validation.
-        
+
         Args:
             file_path: Path to the file containing position numbers
-            
+
         Returns:
             Optional[List[int]]: List of valid position numbers or None if error
         """
@@ -138,17 +144,17 @@ class InputHandler:
         if not os.path.exists(file_path):
             logger.error("File not found: %s", file_path)
             return None
-        
+
         if not os.path.isfile(file_path):
             logger.error("Not a file: %s", file_path)
             return None
-        
+
         try:
             # Check read permissions
             if not os.access(file_path, os.R_OK):
                 logger.error("No read permission for file: %s", file_path)
                 return None
-            
+
             positions = []
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line_num, line in enumerate(f, 1):
@@ -156,7 +162,7 @@ class InputHandler:
                     if not line or not line.isdigit():
                         logger.warning("Skipping invalid content at line %s: '%s'", line_num, line)
                         continue
-                    
+
                     num = int(line)
                     if 1 <= num <= self.word_count:
                         positions.append(num)
@@ -165,14 +171,20 @@ class InputHandler:
                             "Skipping out-of-range number at line %s: %s "
                             "(valid range: 1-%s)", line_num, num, self.word_count
                         )
-            
+
             if not positions:
                 logger.warning("No valid position numbers found in file: %s", file_path)
-            
+
             return positions
-            
+
+        except IOError as e:
+            logger.error("I/O error reading positions file: %s", str(e))
+            return None
+        except ValueError as e:
+            logger.error("Value error in positions file: %s", str(e))
+            return None
         except Exception as e:
-            logger.error("Error reading positions file: %s", str(e))
+            logger.error("Unexpected error reading positions file: %s", str(e))
             return None
 
     def get_input(self, stdscr: Any) -> Optional[List[int]]:
@@ -206,13 +218,23 @@ class InputHandler:
                 validated_input = self.validate_number_input(input_str)
                 if validated_input:
                     return validated_input
-                
+
                 stdscr.addstr(6, 0, f"Invalid input. Please enter a number between 1-{self.word_count}")
                 stdscr.refresh()
                 time.sleep(1)
 
+            except UnicodeDecodeError as e:
+                logger.error("Unicode decode error: %s", str(e))
+                stdscr.addstr(6, 0, "Invalid character input")
+                stdscr.refresh()
+                time.sleep(1)
+            except ValueError as e:
+                logger.error("Value error: %s", str(e))
+                stdscr.addstr(6, 0, "Invalid input format")
+                stdscr.refresh()
+                time.sleep(1)
             except Exception as e:
-                logger.error("Error processing input: %s", str(e))
+                logger.error("Unexpected input error: %s", str(e))
                 stdscr.addstr(6, 0, "Error processing input")
                 stdscr.refresh()
                 time.sleep(1)
