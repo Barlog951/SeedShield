@@ -1,3 +1,10 @@
+## [0.2.3](https://github.com/Barlog951/SeedShield/compare/v0.2.2...v0.2.3) (2025-10-31)
+
+
+### Bug Fixes
+
+* **deps:** bump python from 3.13-slim to 3.14-slim ([#12](https://github.com/Barlog951/SeedShield/issues/12)) ([1164e13](https://github.com/Barlog951/SeedShield/commit/1164e1331c98b9dabd70541fbcca20fe74a54dbd))
+
 ## [0.2.2](https://github.com/Barlog951/SeedShield/compare/v0.2.1...v0.2.2) (2025-03-04)
 
 
