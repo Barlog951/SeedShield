@@ -1,5 +1,5 @@
 """
-SeedShield: Secure BIP39 word viewer with masking and reveal functionality.
+Secure BIP39 word viewer.
 
 This module provides a secure interface for viewing BIP39 seed words with
 built-in security features like masking, timed reveals, and secure memory handling.
@@ -33,27 +33,17 @@ def parse_arguments() -> argparse.Namespace:
         argparse.Namespace: Parsed arguments
     """
     parser = argparse.ArgumentParser(
-        description=f'{APP_NAME} v{VERSION}: Secure BIP39 word viewer with masking and reveal'
+        description=f"{APP_NAME} v{VERSION}: Secure BIP39 word viewer with masking and reveal"
     )
     parser.add_argument(
-        '-w', '--wordlist',
+        "-w",
+        "--wordlist",
         default=DEFAULT_WORDLIST_PATH,
-        help=f'Path to wordlist file (default: {DEFAULT_WORDLIST_PATH})'
+        help=f"Path to wordlist file (default: {DEFAULT_WORDLIST_PATH})",
     )
-    parser.add_argument(
-        '-i', '--input',
-        help='Input file with positions'
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Enable verbose logging'
-    )
-    parser.add_argument(
-        '--version',
-        action='version',
-        version=f'{APP_NAME} v{VERSION}'
-    )
+    parser.add_argument("-i", "--input", help="Input file with positions")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--version", action="version", version=f"{APP_NAME} v{VERSION}")
 
     return parser.parse_args()
 

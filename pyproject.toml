@@ -65,6 +65,15 @@ markers = [
 disable = [
     "C0111",  # missing-docstring
     "C0103",  # invalid-name
+    "R0913",  # too-many-arguments
+    "R0917",  # too-many-positional-arguments
+    "R0914",  # too-many-locals
+    "R0902",  # too-many-instance-attributes
+    "R0903",  # too-few-public-methods
+    "R0911",  # too-many-return-statements
+    "W0718",  # broad-exception-caught
+    "W0212",  # protected-access
+    "C0415",  # import-outside-toplevel
 ]
 
 [tool.flake8]
@@ -72,7 +81,7 @@ max-line-length = 100
 exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

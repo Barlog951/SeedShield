@@ -25,8 +25,9 @@ class SecureWordInterface:
     a secure interface for viewing sensitive seed phrases.
     """
 
-    def __init__(self, wordlist_path: str = DEFAULT_WORDLIST_FULLPATH,
-                 ui_manager: Optional[UIManager] = None):
+    def __init__(
+        self, wordlist_path: str = DEFAULT_WORDLIST_FULLPATH, ui_manager: Optional[UIManager] = None
+    ):
         """
         Initialize the secure word interface with handlers and configuration.
 
@@ -73,7 +74,7 @@ class SecureWordInterface:
         logger.debug("Loading wordlist from %s", wordlist_path)
 
         try:
-            with open(wordlist_path, 'r', encoding='utf-8') as f:
+            with open(wordlist_path, "r", encoding="utf-8") as f:
                 self.words = [word.strip() for word in f.readlines()]
 
             if not self.words:
@@ -113,8 +114,9 @@ class SecureWordInterface:
 
         return new_positions
 
-    def _update_display_state(self, stdscr: Any, positions: List[int], scroll_position: int,
-                             current_time: float) -> Tuple[int, int]:
+    def _update_display_state(
+        self, stdscr: Any, positions: List[int], scroll_position: int, current_time: float
+    ) -> Tuple[int, int]:
         """
         Update the display based on current state.
 
@@ -142,19 +144,22 @@ class SecureWordInterface:
 
         # Display words with current state
         visible_count = self.display_handler.display_words(
-            stdscr, positions, scroll_position, cursor_pos, reached_last)
+            stdscr, positions, scroll_position, cursor_pos, reached_last
+        )
 
         # Handle any autoscrolling needed to keep the cursor in view
         scroll_position = self.display_handler.handle_autoscroll(
-            cursor_pos, scroll_position, height)
+            cursor_pos, scroll_position, height
+        )
 
         # Refresh the display
         stdscr.refresh()
 
         return visible_count, scroll_position
 
-    def _backwards_compat_handle_commands(self, key: int, positions: List[int], current_time: float,
-                           scroll_position: int) -> Tuple[bool, List[int], int]:
+    def _backwards_compat_handle_commands(
+        self, key: int, positions: List[int], current_time: float, scroll_position: int
+    ) -> Tuple[bool, List[int], int]:
         """
         Backward compatibility method for tests.
 
@@ -174,16 +179,20 @@ class SecureWordInterface:
         command_result = self.state_handler.handle_commands(key, positions, current_time)
         if command_result is not None:
             new_positions = command_result
-        if key == ord('r'):
+        if key == ord("r"):
             new_scroll = 0
-        if key == ord('n'):
+        if key == ord("n"):
             should_reinit = True
 
         return should_reinit, new_positions, new_scroll
 
     def _process_user_input(
-            self, stdscr: Any, positions: List[int], scroll_position: int,
-            visible_count: int, current_time: float
+        self,
+        stdscr: Any,
+        positions: List[int],
+        scroll_position: int,
+        visible_count: int,
+        current_time: float,
     ) -> Tuple[bool, int]:
         """
         Process user input and update state accordingly.
@@ -205,7 +214,8 @@ class SecureWordInterface:
             # Process input if available
             if c != -1:
                 should_quit, should_reinit, new_scroll, new_positions = self._handle_user_input(
-                    c, positions, scroll_position, visible_count, current_time)
+                    c, positions, scroll_position, visible_count, current_time
+                )
 
                 # Handle timeout adjustment for input mode
                 if should_reinit:
@@ -242,8 +252,9 @@ class SecureWordInterface:
         logger.debug("Quit command received")
         return True, False, 0, []
 
-    def _handle_navigation(self, key: int, positions: List[int],
-                           scroll_position: int, visible_count: int) -> int:
+    def _handle_navigation(
+        self, key: int, positions: List[int], scroll_position: int, visible_count: int
+    ) -> int:
         """
         Handle navigation key inputs.
 
@@ -256,14 +267,12 @@ class SecureWordInterface:
         Returns:
             int: New scroll position
         """
-        logger.debug("Navigation key received: %s",
-                   'UP' if key == curses.KEY_UP else 'DOWN')
-        return self.state_handler.handle_navigation(
-            key, positions, scroll_position, visible_count)
+        logger.debug("Navigation key received: %s", "UP" if key == curses.KEY_UP else "DOWN")
+        return self.state_handler.handle_navigation(key, positions, scroll_position, visible_count)
 
-    def _handle_command_keys(self, key: int, positions: List[int],
-                            current_time: float, scroll_position: int
-                            ) -> Tuple[bool, int, List[int]]:
+    def _handle_command_keys(
+        self, key: int, positions: List[int], current_time: float, scroll_position: int
+    ) -> Tuple[bool, int, List[int]]:
         """
         Handle command keys (n, s, r).
 
@@ -287,15 +296,16 @@ class SecureWordInterface:
             new_positions = command_result
 
         # Handle specific commands
-        if key == ord('r'):
+        if key == ord("r"):
             new_scroll = 0
-        elif key == ord('n'):
+        elif key == ord("n"):
             should_reinit = True
 
         return should_reinit, new_scroll, new_positions
 
-    def _handle_mouse_event(self, positions: List[int],
-                           scroll_position: int, current_time: float) -> None:
+    def _handle_mouse_event(
+        self, positions: List[int], scroll_position: int, current_time: float
+    ) -> None:
         """
         Handle mouse events for word revealing.
 
@@ -316,8 +326,12 @@ class SecureWordInterface:
             logger.debug("Error handling mouse event: %s", str(e))
 
     def _handle_user_input(
-            self, c: int, positions: List[int], scroll_position: int,
-            visible_count: int, current_time: float
+        self,
+        c: int,
+        positions: List[int],
+        scroll_position: int,
+        visible_count: int,
+        current_time: float,
     ) -> Tuple[bool, bool, int, List[int]]:
         """
         Process a single user input and determine actions.
@@ -341,15 +355,16 @@ class SecureWordInterface:
         new_positions: List[int] = []
 
         # Handle different input types
-        if c == ord('q'):
+        if c == ord("q"):
             should_quit, should_reinit, new_scroll, new_positions = self._handle_quit_command()
 
         elif c in (curses.KEY_UP, curses.KEY_DOWN):
             new_scroll = self._handle_navigation(c, positions, scroll_position, visible_count)
 
-        elif c in (ord('n'), ord('s'), ord('r')):
+        elif c in (ord("n"), ord("s"), ord("r")):
             should_reinit, new_scroll, new_positions = self._handle_command_keys(
-                c, positions, current_time, scroll_position)
+                c, positions, current_time, scroll_position
+            )
 
         elif c == curses.KEY_MOUSE:
             self._handle_mouse_event(positions, scroll_position, current_time)
@@ -420,10 +435,12 @@ class SecureWordInterface:
 
             # Update display and process input
             visible_count, scroll_position = self._update_display_state(
-                stdscr, positions, scroll_position, current_time)
+                stdscr, positions, scroll_position, current_time
+            )
 
             should_continue, scroll_position = self._process_user_input(
-                stdscr, positions, scroll_position, visible_count, current_time)
+                stdscr, positions, scroll_position, visible_count, current_time
+            )
 
             if not should_continue:
                 break
@@ -438,6 +455,7 @@ class SecureWordInterface:
         Raises:
             Exception: If there's an error during execution
         """
+
         def run_interface() -> None:
             """Inner function to run with UI context."""
             positions: List[int] = []

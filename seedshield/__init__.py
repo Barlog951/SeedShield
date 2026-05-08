@@ -19,14 +19,14 @@ __version__ = VERSION
 
 # Define available components
 __all__ = [
-    'SecureWordInterface',
-    'InputHandler',
-    'DisplayHandler',
-    'StateHandler',
-    'UIManager',
-    'secure_clear_string',
-    'secure_clear_list',
-    'secure_clipboard_clear',
-    'setup_logging',
-    'logger'
+    "SecureWordInterface",
+    "InputHandler",
+    "DisplayHandler",
+    "StateHandler",
+    "UIManager",
+    "secure_clear_string",
+    "secure_clear_list",
+    "secure_clipboard_clear",
+    "setup_logging",
+    "logger",
 ]

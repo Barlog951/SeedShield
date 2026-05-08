@@ -32,7 +32,7 @@ SCROLL_INDICATOR_DOWN = "↓ More ↓"
 MENU_TEXT = {
     "standard": "'n' - new input, 's' - show one by one, 'q' - quit, ↑↓ - scroll",
     "with_reset": "'n' - input, 's' - show one by one, 'r' - reset, 'q' - quit, ↑↓ - scroll",
-    "mouse_help": "Mouse over to reveal word"
+    "mouse_help": "Mouse over to reveal word",
 }
 
 
@@ -52,20 +52,17 @@ def setup_logging(log_level: int = logging.INFO) -> logging.Logger:
     # Console handler for error messages only
     console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(logging.ERROR)
-    console_formatter = logging.Formatter('%(levelname)s: %(message)s')
+    console_formatter = logging.Formatter("%(levelname)s: %(message)s")
     console_handler.setFormatter(console_formatter)
 
     # File handler with rotation to prevent excessive log growth
     try:
         file_handler = logging.handlers.RotatingFileHandler(
-            DEFAULT_LOG_PATH,
-            maxBytes=LOG_MAX_SIZE,
-            backupCount=LOG_BACKUP_COUNT
+            DEFAULT_LOG_PATH, maxBytes=LOG_MAX_SIZE, backupCount=LOG_BACKUP_COUNT
         )
         file_handler.setLevel(log_level)
         file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
         file_handler.setFormatter(file_formatter)
 

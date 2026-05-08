@@ -1,7 +1,5 @@
 import pytest
-from unittest.mock import patch
 from seedshield.display_handler import DisplayHandler
-from tests.test_fixtures import mock_stdscr
 
 
 def test_display_handler_init():
@@ -21,11 +19,11 @@ def test_handle_scroll():
     height = 20
 
     # Test scroll forward
-    assert handler.handle_scroll(5, 0, height) == 0
-    assert handler.handle_scroll(10, 5, height) == 5
+    assert handler.handle_autoscroll(5, 0, height) == 0
+    assert handler.handle_autoscroll(10, 5, height) == 5
 
     # Test scroll backward
-    assert handler.handle_scroll(3, 5, height) == 3
+    assert handler.handle_autoscroll(3, 5, height) == 3
 
 
 def test_display_words(mock_stdscr):
@@ -75,5 +73,5 @@ def test_scroll_position_limits(mock_stdscr):
     handler = DisplayHandler(["word1", "word2", "word3"])
 
     # Test scroll boundaries
-    assert handler.handle_scroll(0, 0, 10) == 0  # Lower bound
-    assert handler.handle_scroll(5, 5, 10) == 5  # Upper bound
+    assert handler.handle_autoscroll(0, 0, 10) == 0  # Lower bound
+    assert handler.handle_autoscroll(5, 5, 10) == 5  # Upper bound

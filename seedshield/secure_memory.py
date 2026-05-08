@@ -30,11 +30,11 @@ def secure_clear_string(string_var: str) -> None:
     # Get the memory address of the string
     try:
         # Generate random data to overwrite with
-        random_data = ''.join(chr(secrets.randbelow(128)) for _ in range(len(string_var)))
+        random_data = "".join(chr(secrets.randbelow(128)) for _ in range(len(string_var)))
 
         # Try to directly modify the string's internal buffer
         # This is implementation-dependent and may not work in all Python versions
-        if hasattr(string_var, '_wa_'):  # For PyPy
+        if hasattr(string_var, "_wa_"):  # For PyPy
             string_var._wa_[:] = random_data
         else:
             # For CPython, try to access the internal buffer
@@ -43,7 +43,7 @@ def secure_clear_string(string_var: str) -> None:
 
             # Overwrite with random data
             # This relies on implementation details and is not guaranteed to work
-            ctypes.memmove(addr, random_data.encode('utf-8'), len(string_var))
+            ctypes.memmove(addr, random_data.encode("utf-8"), len(string_var))
     except (AttributeError, TypeError, ValueError) as e:
         # Log error but don't raise - best effort only
         logger.debug("Secure string clearing failed: %s", str(e))
@@ -87,7 +87,8 @@ def secure_clipboard_clear() -> bool:
     """
     try:
         import pyperclip  # type: ignore
-        pyperclip.copy('')
+
+        pyperclip.copy("")
         return True
     except ImportError as e:
         logger.error("Failed to import pyperclip: %s", str(e))

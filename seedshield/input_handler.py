@@ -65,7 +65,7 @@ class InputHandler:
             stdscr: Curses window object for terminal display
 
         Returns:
-            Optional[List[int]]: List of valid position numbers, or None if no valid numbers found
+            Optional[List[int]]: List of valid position numbers or None
         """
         try:
             content = pyperclip.paste()
@@ -156,7 +156,7 @@ class InputHandler:
                 return None
 
             positions = []
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if not line or not line.isdigit():
@@ -168,8 +168,10 @@ class InputHandler:
                         positions.append(num)
                     else:
                         logger.warning(
-                            "Skipping out-of-range number at line %s: %s "
-                            "(valid range: 1-%s)", line_num, num, self.word_count
+                            "Skipping out-of-range number at line %s: %s (valid range: 1-%s)",
+                            line_num,
+                            num,
+                            self.word_count,
                         )
 
             if not positions:
@@ -214,11 +216,11 @@ class InputHandler:
             Optional[List[int]]: Processed positions or None
         """
         # Handle quitting
-        if input_str == 'q':
+        if input_str == "q":
             return None
 
         # Handle clipboard input
-        if input_str == 'v':
+        if input_str == "v":
             return self.process_clipboard_input(stdscr)
 
         # Handle individual number
@@ -249,7 +251,7 @@ class InputHandler:
             curses.echo()
 
             try:
-                input_str = stdscr.getstr().decode('utf-8').strip().lower()
+                input_str = stdscr.getstr().decode("utf-8").strip().lower()
                 # Skip empty input
                 if not input_str:
                     continue

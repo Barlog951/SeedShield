@@ -62,7 +62,7 @@ class UIManager:
             try:
                 curses.start_color()
                 # Make sure color pairs are available before initializing them
-                if hasattr(curses, 'COLORS') and hasattr(curses, 'COLOR_PAIRS'):
+                if hasattr(curses, "COLORS") and hasattr(curses, "COLOR_PAIRS"):
                     if curses.COLORS > 0 and curses.COLOR_PAIRS > 0:
                         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
                         curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
@@ -148,7 +148,7 @@ class UIManager:
         try:
             raw_input = self.stdscr.getstr()
             if raw_input is not None:
-                input_str: str = raw_input.decode('utf-8').strip()
+                input_str: str = raw_input.decode("utf-8").strip()
                 return input_str
             return ""
         except Exception:
