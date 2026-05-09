@@ -73,11 +73,9 @@ disable = [
     "C0111",  # missing-docstring
     "C0103",  # invalid-name
     "W0613",  # unused-argument (often used in tests with fixtures)
-    "W0612",  # unused-variable
-    "C0411",  # wrong-import-order
     "W1514",  # unspecified-encoding
     "E1101",  # no-member (often triggered by mocks)
-    "W0104",  # pointless-statement
+    "C0411",  # wrong-import-order
 ]
 
 [tool.mypy]

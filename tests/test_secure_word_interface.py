@@ -189,7 +189,7 @@ def test_auto_scroll_sequential_reveal(mock_curses, mock_stdscr):
     for i in range(8):
         interface.state_handler.handle_commands(ord("s"), positions, time.time())
         if interface.state_handler.cursor_pos is not None:
-            height, _ = mock_stdscr.getmaxyx()
+            _, _ = mock_stdscr.getmaxyx()
             visible_count = interface.display_handler.display_words(
                 mock_stdscr,
                 positions,
@@ -262,7 +262,6 @@ def test_reset_command_behavior(mock_curses, mock_stdscr):
     interface = SecureWordInterface()
     interface.words = [f"word{i}" for i in range(20)]
     positions = list(range(1, 21))
-    10
 
     interface.state_handler.current_index = len(positions) - 1
     interface.state_handler.reached_last = True
@@ -512,14 +511,14 @@ def test_handle_commands_with_all_types():
     current_time = time.time()
 
     # Test 'n' command
-    should_quit, should_reinit, new_scroll, new_positions = interface._handle_user_input(
+    _, should_reinit, new_scroll, _ = interface._handle_user_input(
         ord("n"), positions, 0, 3, current_time
     )
     assert should_reinit is True
     assert new_scroll == 0
 
     # Test 'r' command
-    should_quit, should_reinit, new_scroll, new_positions = interface._handle_user_input(
+    _, should_reinit, new_scroll, _ = interface._handle_user_input(
         ord("r"), positions, 5, 3, current_time
     )
     assert new_scroll == 0
