@@ -168,7 +168,7 @@ class InputHandler:
                         positions.append(num)
                     else:
                         logger.warning(
-                            "Skipping out-of-range number at line %s: %s (valid range: 1-%s)",
+                            "Skipping out-of-range at %s: %s (1-%s)",
                             line_num,
                             num,
                             self.word_count,

@@ -80,7 +80,9 @@ def mock_wordlist_validation():
     """Mock wordlist validation to prevent file system access during tests."""
     with patch(
         "seedshield.main.validate_wordlist_path",
-        return_value="/Users/dodko/DEV/python/seedshield/seedshield/data/english.txt",
+        return_value=os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "seedshield", "data", "english.txt"
+        ),
     ):
         yield
 

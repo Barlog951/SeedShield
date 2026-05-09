@@ -10,7 +10,7 @@ description = "Secure BIP39 word viewer with masking and reveal functionality"
 authors = [
     {name = "Barlog951", email = "barlog951@gmail.com"}
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 dependencies = [
     "pyperclip>=1.8.0",
 ]
@@ -21,8 +21,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -63,8 +61,6 @@ markers = [
 
 [tool.pylint.messages_control]
 disable = [
-    "C0111",  # missing-docstring
-    "C0103",  # invalid-name
     "R0913",  # too-many-arguments
     "R0917",  # too-many-positional-arguments
     "R0914",  # too-many-locals
@@ -74,14 +70,19 @@ disable = [
     "W0718",  # broad-exception-caught
     "W0212",  # protected-access
     "C0415",  # import-outside-toplevel
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "W0613",  # unused-argument (often used in tests with fixtures)
+    "W0612",  # unused-variable
+    "C0411",  # wrong-import-order
+    "W1514",  # unspecified-encoding
+    "E1101",  # no-member (often triggered by mocks)
+    "W0104",  # pointless-statement
 ]
-
-[tool.flake8]
-max-line-length = 100
-exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+ignore_missing_imports = true

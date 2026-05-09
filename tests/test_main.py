@@ -55,8 +55,7 @@ def test_main_with_wordlist_argument():
                     with patch("os.path.isfile", return_value=True):  # Mock file type check
                         with patch("os.access", return_value=True):  # Mock access permission check
                             with patch.object(UIManager, "cleanup"):
-                                with patch("seedshield.ui_manager.UIManager") as MockUIManager:
-                                    MockUIManager.return_value
+                                with patch("seedshield.ui_manager.UIManager"):
                                     main()
 
     # Verify SecureWordInterface instantiated with the validated custom wordlist path
@@ -82,8 +81,7 @@ def test_main_with_input_file_argument():
             ):
                 with patch("os.path.exists", side_effect=lambda x: x != "positions.txt" or True):
                     with patch.object(UIManager, "cleanup"):
-                        with patch("seedshield.ui_manager.UIManager") as MockUIManager:
-                            MockUIManager.return_value
+                        with patch("seedshield.ui_manager.UIManager"):
                             main()
 
     # Verify SecureWordInterface instantiated with the validated wordlist path
