@@ -125,7 +125,7 @@ class TestUIManager:
     def test_cleanup_error(self, mock_curses):
         """Test error handling during cleanup."""
         mock_stdscr = MagicMock()
-        mock_stdscr.keypad.side_effect = Exception("Cleanup error")
+        mock_stdscr.keypad.side_effect = RuntimeError("Cleanup error")
 
         with patch("seedshield.ui_manager.logger") as mock_logger:
             ui = UIManager()
@@ -181,7 +181,7 @@ class TestUIManager:
 
     def test_get_string_error(self, mock_curses, mock_stdscr):
         """Test error handling when getting string input."""
-        mock_stdscr.getstr.side_effect = Exception("Input error")
+        mock_stdscr.getstr.side_effect = RuntimeError("Input error")
 
         ui = UIManager()
         ui.initialize(mock_stdscr=mock_stdscr)

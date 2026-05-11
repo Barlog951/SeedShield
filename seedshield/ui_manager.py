@@ -66,7 +66,7 @@ class UIManager:
                     if curses.COLORS > 0 and curses.COLOR_PAIRS > 0:
                         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
                         curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
-            except Exception as color_error:
+            except (curses.error, RuntimeError) as color_error:
                 # If colors not supported, continue without them
                 logger.debug("Color initialization failed: %s", str(color_error))
 
@@ -104,7 +104,7 @@ class UIManager:
                 self.stdscr.keypad(False)
                 curses.echo()
                 curses.endwin()
-            except Exception as e:
+            except (curses.error, RuntimeError) as e:
                 logger.error("Error during UI cleanup: %s", str(e))
 
     def get_input(self, echo: bool = False) -> int:
@@ -151,7 +151,7 @@ class UIManager:
                 input_str: str = raw_input.decode("utf-8").strip()
                 return input_str
             return ""
-        except Exception:
+        except (curses.error, UnicodeDecodeError, RuntimeError):
             return ""
         finally:
             curses.noecho()

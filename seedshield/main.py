@@ -115,12 +115,8 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, exiting cleanly")
         sys.exit(0)
-    except (ValueError, IOError, OSError) as e:
+    except (ValueError, IOError, OSError, RuntimeError) as e:
         logger.error("Error running secure word interface: %s", str(e))
-        print(f"Error: {str(e)}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        logger.error("Unexpected error: %s", str(e))
         print(f"Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
 

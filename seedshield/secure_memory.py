@@ -44,12 +44,9 @@ def secure_clear_string(string_var: str) -> None:
             # Overwrite with random data
             # This relies on implementation details and is not guaranteed to work
             ctypes.memmove(addr, random_data.encode("utf-8"), len(string_var))
-    except (AttributeError, TypeError, ValueError) as e:
+    except (AttributeError, TypeError, ValueError, RuntimeError) as e:
         # Log error but don't raise - best effort only
         logger.debug("Secure string clearing failed: %s", str(e))
-    except Exception as e:
-        # Log unexpected errors
-        logger.debug("Unexpected error in secure string clearing: %s", str(e))
 
     # Can't actually set the parameter to None as it would only affect the local reference
 
@@ -90,9 +87,6 @@ def secure_clipboard_clear() -> bool:
 
         pyperclip.copy("")
         return True
-    except ImportError as e:
-        logger.error("Failed to import pyperclip: %s", str(e))
-        return False
-    except Exception as e:
+    except (ImportError, RuntimeError, NameError, TypeError) as e:
         logger.error("Failed to clear clipboard: %s", str(e))
         return False

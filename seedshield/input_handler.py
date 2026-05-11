@@ -102,7 +102,7 @@ class InputHandler:
             stdscr.refresh()
             time.sleep(1)
             return None
-        except Exception as e:
+        except (RuntimeError, TypeError, NameError) as e:
             logger.error("Unexpected clipboard error: %s", str(e))
             stdscr.addstr(6, 0, "Unexpected error with clipboard")
             stdscr.refresh()
@@ -185,7 +185,7 @@ class InputHandler:
         except ValueError as e:
             logger.error("Value error in positions file: %s", str(e))
             return None
-        except Exception as e:
+        except (RuntimeError, TypeError) as e:
             logger.error("Unexpected error reading positions file: %s", str(e))
             return None
 
@@ -267,7 +267,7 @@ class InputHandler:
                 self._display_error(stdscr, "Invalid character input", e)
             except ValueError as e:
                 self._display_error(stdscr, "Invalid input format", e)
-            except Exception as e:
+            except (curses.error, RuntimeError, TypeError) as e:
                 self._display_error(stdscr, "Error processing input", e)
             finally:
                 curses.noecho()

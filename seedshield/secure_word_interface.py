@@ -88,7 +88,7 @@ class SecureWordInterface:
         except IOError as e:
             logger.error("Error reading wordlist file: %s", str(e))
             raise
-        except Exception as e:
+        except (RuntimeError, ValueError) as e:
             logger.error("Unexpected error loading wordlist: %s", str(e))
             raise
 
@@ -322,7 +322,7 @@ class SecureWordInterface:
             if 0 <= visible_index < len(positions):
                 logger.debug("Mouse reveal at index %s", visible_index)
                 self.state_handler.handle_mouse_reveal(visible_index, current_time)
-        except Exception as e:
+        except (curses.error, RuntimeError, TypeError, ValueError) as e:
             logger.debug("Error handling mouse event: %s", str(e))
 
     def _handle_user_input(
@@ -407,7 +407,7 @@ class SecureWordInterface:
         except (FileNotFoundError, IOError, ValueError) as e:
             logger.error("Error loading positions file: %s", str(e))
             raise
-        except Exception as e:
+        except (RuntimeError, TypeError) as e:
             logger.error("Unexpected error loading positions file: %s", str(e))
             raise ValueError(f"Error processing positions file: {str(e)}") from e
 

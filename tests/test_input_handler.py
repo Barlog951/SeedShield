@@ -59,7 +59,7 @@ def test_process_clipboard_with_pyperclip_exception(mock_clear, mock_paste, mock
 def test_process_clipboard_with_general_exception(mock_clear, mock_paste, mock_stdscr):
     """Test error handling when an unexpected exception occurs."""
     handler = InputHandler(10)
-    mock_paste.side_effect = Exception("Unexpected error")
+    mock_paste.side_effect = RuntimeError("Unexpected error")
     mock_clear.return_value = True
 
     result = handler.process_clipboard_input(mock_stdscr)
@@ -165,7 +165,7 @@ def test_load_positions_unexpected_error(mock_open, mock_access, mock_isfile, mo
     mock_exists.return_value = True
     mock_isfile.return_value = True
     mock_access.return_value = True
-    mock_open.side_effect = Exception("Unexpected error")
+    mock_open.side_effect = RuntimeError("Unexpected error")
 
     result = handler.load_positions_from_file("test_file.txt")
     assert result is None
@@ -251,7 +251,7 @@ def test_get_input_general_exception(mock_noecho, mock_echo, mock_stdscr):
     """Test handling of general exceptions in get_input."""
     handler = InputHandler(10)
     # Set up get_input to first cause Exception, then return 'q' to exit the loop
-    mock_stdscr.getstr.side_effect = [Exception("Unexpected error"), b"q"]
+    mock_stdscr.getstr.side_effect = [RuntimeError("Unexpected error"), b"q"]
 
     result = handler.get_input(mock_stdscr)
     mock_stdscr.addstr.assert_any_call(6, 0, "Error processing input")

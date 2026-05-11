@@ -101,7 +101,7 @@ def test_main_generic_exception():
     """
     with patch("seedshield.main.SecureWordInterface") as MockSecureInterface:
         mock_instance = MockSecureInterface.return_value
-        mock_instance.run.side_effect = Exception("Unexpected error!")
+        mock_instance.run.side_effect = RuntimeError("Unexpected error!")
         with patch("sys.argv", ["main.py"]):
             with patch(
                 "seedshield.main.validate_wordlist_path", return_value="seedshield/data/english.txt"

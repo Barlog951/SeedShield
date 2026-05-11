@@ -7,6 +7,7 @@ name = "SeedShield"
 version = "0.2.3"
 readme = { file = "README.md", content-type = "text/markdown" }
 description = "Secure BIP39 word viewer with masking and reveal functionality"
+license = {text = "MIT"}
 authors = [
     {name = "Barlog951", email = "barlog951@gmail.com"}
 ]
@@ -67,13 +68,11 @@ disable = [
     "R0902",  # too-many-instance-attributes
     "R0903",  # too-few-public-methods
     "R0911",  # too-many-return-statements
-    "W0718",  # broad-exception-caught
     "W0212",  # protected-access
     "C0415",  # import-outside-toplevel
     "C0111",  # missing-docstring
     "C0103",  # invalid-name
     "W0613",  # unused-argument (often used in tests with fixtures)
-    "W1514",  # unspecified-encoding
     "E1101",  # no-member (often triggered by mocks)
     "C0411",  # wrong-import-order
 ]

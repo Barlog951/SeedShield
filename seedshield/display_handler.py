@@ -280,12 +280,9 @@ class DisplayHandler:
                     is_revealed = cursor_pos == i
                     self._render_word(stdscr, word, display_num, y_pos, is_revealed, width)
 
-            except curses.error:
-                # Handle rendering errors
-                logger.debug("Error displaying word at position %s", i)
-            except Exception as e:
-                # Handle unexpected errors
-                logger.error("Unexpected error displaying word at position %s: %s", i, str(e))
+            except (curses.error, RuntimeError, TypeError, ValueError) as e:
+                # Handle rendering or unexpected errors
+                logger.debug("Error displaying word at position %s: %s", i, str(e))
 
     def calculate_visible_range(self, height: int) -> int:
         """
