@@ -84,7 +84,7 @@ class TestUIManager:
         """Test error handling during initialization."""
         # Create a mock screen that raises an exception when keypad is called
         mock_screen = MagicMock()
-        mock_screen.keypad.side_effect = Exception("Test error")
+        mock_screen.keypad.side_effect = RuntimeError("Test error")
 
         # Mock the logger to check for error logging
         mock_logger = MagicMock()
@@ -96,7 +96,7 @@ class TestUIManager:
 
         with patch("seedshield.ui_manager.logger", mock_logger):
             # The initialize method should raise the original exception
-            with pytest.raises(Exception, match="Test error"):
+            with pytest.raises(RuntimeError, match="Test error"):
                 ui.initialize(mock_stdscr=mock_screen)
 
             # Verify error was logged
@@ -266,7 +266,7 @@ class TestUIManager:
 
     def test_with_ui_context_error(self, mock_curses, mock_stdscr):
         """Test error handling within UI context."""
-        callback = MagicMock(side_effect=Exception("Context error"))
+        callback = MagicMock(side_effect=RuntimeError("Context error"))
 
         ui = UIManager()
 
@@ -276,7 +276,7 @@ class TestUIManager:
             ui, "cleanup"
         ) as mock_cleanup:
 
-            with pytest.raises(Exception, match="Context error"):
+            with pytest.raises(RuntimeError, match="Context error"):
                 ui.with_ui_context(callback)
 
             # Verify error was logged

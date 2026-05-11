@@ -90,7 +90,7 @@ class UIManager:
             # Initialize size variables
             self.update_dimensions()
 
-        except Exception as e:
+        except (curses.error, RuntimeError, TypeError, ValueError) as e:
             self.cleanup()
             logger.error("Failed to initialize UI: %s", str(e))
             raise
@@ -215,7 +215,7 @@ class UIManager:
         try:
             self.initialize()
             return callback()
-        except Exception as e:
+        except (curses.error, RuntimeError, TypeError, ValueError) as e:
             logger.error("Error in UI context: %s", str(e))
             raise
         finally:
