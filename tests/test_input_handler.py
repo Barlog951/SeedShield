@@ -111,7 +111,7 @@ def test_load_positions_with_invalid_content(tmp_path):
     handler = InputHandler(10)
     test_file = tmp_path / "positions.txt"
 
-    with open(test_file, "w") as f:
+    with open(test_file, "w", encoding="utf-8") as f:
         f.write("1\ntext\n3\n\n")
 
     result = handler.load_positions_from_file(str(test_file))
@@ -123,7 +123,7 @@ def test_load_positions_with_out_of_range_numbers(tmp_path):
     handler = InputHandler(10)
     test_file = tmp_path / "positions.txt"
 
-    with open(test_file, "w") as f:
+    with open(test_file, "w", encoding="utf-8") as f:
         f.write("1\n15\n3\n0\n")
 
     result = handler.load_positions_from_file(str(test_file))
@@ -135,7 +135,7 @@ def test_load_positions_empty_result(tmp_path):
     handler = InputHandler(10)
     test_file = tmp_path / "empty_positions.txt"
 
-    with open(test_file, "w") as f:
+    with open(test_file, "w", encoding="utf-8") as f:
         f.write("text\n15\n0\n")  # All invalid
 
     result = handler.load_positions_from_file(str(test_file))
