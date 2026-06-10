@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/Barlog951/SeedShield/compare/v0.2.4...v0.3.0) (2026-06-10)
+
+
+### Features
+
+* multi-position input plus TUI hardening and cleanup ([be96e47](https://github.com/Barlog951/SeedShield/commit/be96e477afd7ec1370ce15c88b03a26a127da4e0))
+
 ## [0.2.4](https://github.com/Barlog951/SeedShield/compare/v0.2.3...v0.2.4) (2026-06-10)
 
 
