@@ -6,11 +6,41 @@ ensuring proper masking and interaction.
 """
 
 import curses
+from dataclasses import dataclass
 from typing import List, Optional, Any
 
 from .config import logger, MASK_CHARACTER, MASK_LENGTH
 from .config import SCROLL_INDICATOR_UP, SCROLL_INDICATOR_DOWN, MENU_TEXT
 from .state_handler import StateHandler
+
+
+@dataclass(frozen=True)
+class Viewport:
+    """Terminal viewport for one render pass; start doubles as scroll position."""
+
+    height: int
+    width: int
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class WordRow:
+    """A single word row ready for rendering."""
+
+    word: str
+    display_num: int
+    y_pos: int
+    revealed: bool
+
+
+@dataclass(frozen=True)
+class DisplayState:
+    """View state for one display pass."""
+
+    scroll: int
+    cursor: Optional[int]
+    reached_last: bool
 
 
 class DisplayHandler:
@@ -35,7 +65,6 @@ class DisplayHandler:
         self.words = words
         self.ui_manager = ui_manager
         self.mask = MASK_CHARACTER * MASK_LENGTH
-        self.legacy_mask = self.mask  # For backward compatibility with tests
         self.state_handler: Optional[StateHandler] = None  # Will be set later
 
         # Store the last state to optimize rendering
@@ -44,49 +73,40 @@ class DisplayHandler:
 
         logger.debug("DisplayHandler initialized with %s words", len(words))
 
-    def _add_scroll_indicators(
-        self,
-        stdscr: Any,
-        visible_start: int,
-        visible_end: int,
-        positions: List[int],
-        height: int,
-        width: int,
-    ) -> None:
+    def _add_scroll_indicators(self, stdscr: Any, viewport: Viewport, total: int) -> None:
         """
         Add scroll indicators to the display if needed.
 
         Args:
             stdscr: Curses window objec
-            visible_start: Index of first visible word
-            visible_end: Index of last visible word
-            positions: List of word positions
-            height: Terminal heigh
-            width: Terminal width
+            viewport: Current terminal viewport
+            total: Total number of positions in the list
         """
         # Show up indicator if there are hidden items above
-        if visible_start > 0:
+        if viewport.start > 0:
             try:
-                stdscr.addstr(0, max(0, width - len(SCROLL_INDICATOR_UP) - 1), SCROLL_INDICATOR_UP)
+                stdscr.addstr(
+                    0, max(0, viewport.width - len(SCROLL_INDICATOR_UP) - 1), SCROLL_INDICATOR_UP
+                )
                 logger.debug(
                     "Added up scroll indicator at position 0,%s",
-                    width - len(SCROLL_INDICATOR_UP) - 1,
+                    viewport.width - len(SCROLL_INDICATOR_UP) - 1,
                 )
             except curses.error:
                 pass
 
         # Show down indicator if there are hidden items below
-        if visible_end < len(positions):
+        if viewport.end < total:
             try:
                 stdscr.addstr(
-                    height - 7,
-                    max(0, width - len(SCROLL_INDICATOR_DOWN) - 1),
+                    viewport.height - 7,
+                    max(0, viewport.width - len(SCROLL_INDICATOR_DOWN) - 1),
                     SCROLL_INDICATOR_DOWN,
                 )
                 logger.debug(
                     "Added down scroll indicator at position %s,%s",
-                    height - 7,
-                    width - len(SCROLL_INDICATOR_DOWN) - 1,
+                    viewport.height - 7,
+                    viewport.width - len(SCROLL_INDICATOR_DOWN) - 1,
                 )
             except curses.error:
                 pass
@@ -142,31 +162,26 @@ class DisplayHandler:
             except curses.error:
                 pass
 
-    def _render_word(
-        self, stdscr: Any, word: str, display_num: int, y_pos: int, is_revealed: bool, width: int
-    ) -> None:
+    def _render_word(self, stdscr: Any, row: WordRow, width: int) -> None:
         """
         Render a single word with proper masking and formatting.
 
         Args:
             stdscr: Curses window objec
-            word: The word to display
-            display_num: The display number
-            y_pos: The y position to render a
-            is_revealed: Whether the word should be revealed
+            row: The word row to render
             width: Terminal width
         """
-        display_text = f"{display_num:2d}. {word if is_revealed else self.mask}"
+        display_text = f"{row.display_num:2d}. {row.word if row.revealed else self.mask}"
 
         # Ensure text fits within terminal width
         if len(display_text) >= width:
             display_text = display_text[: width - 1]
 
         # Highlight revealed word
-        if is_revealed:
-            stdscr.addstr(y_pos, 0, display_text, curses.A_BOLD)
+        if row.revealed:
+            stdscr.addstr(row.y_pos, 0, display_text, curses.A_BOLD)
         else:
-            stdscr.addstr(y_pos, 0, display_text)
+            stdscr.addstr(row.y_pos, 0, display_text)
 
     def _get_word_for_position(self, pos: int) -> str:
         """
@@ -181,26 +196,18 @@ class DisplayHandler:
         if 0 <= pos - 1 < len(self.words):
             return self.words[pos - 1]
 
-        logger.warning("Invalid word position: %s", pos)
+        # Never log the position value: positions encode the seed
+        logger.warning("Invalid word position requested")
         return f"INVALID({pos})"
 
-    def display_words(
-        self,
-        stdscr: Any,
-        positions: List[int],
-        scroll_position: int,
-        cursor_pos: Optional[int],
-        is_last_reached: bool,
-    ) -> int:
+    def display_words(self, stdscr: Any, positions: List[int], state: DisplayState) -> int:
         """
         Display words with masking in the terminal interface.
 
         Args:
             stdscr: Curses window objec
             positions: List of word positions to display
-            scroll_position: Current scroll position
-            cursor_pos: Position of cursor (revealed word)
-            is_last_reached: Whether last word has been reached
+            state: Current view state (scroll, cursor, reached_last)
 
         Returns:
             int: Number of visible words that could fit in the current view
@@ -212,46 +219,33 @@ class DisplayHandler:
 
         # Calculate display metrics
         max_display_lines = max(1, height - 7)  # Reserve space for menu and indicators
-        visible_start = scroll_position
-        visible_end = min(len(positions), scroll_position + max_display_lines // 2)
+        viewport = Viewport(
+            height=height,
+            width=width,
+            start=state.scroll,
+            end=min(len(positions), state.scroll + max_display_lines // 2),
+        )
 
-        logger.debug("Displaying words %s-%s of %s", visible_start, visible_end, len(positions))
+        logger.debug("Displaying words %s-%s of %s", viewport.start, viewport.end, len(positions))
 
         # Clear screen for fresh rendering
         stdscr.clear()
 
         # Display words with proper masking
-        self._display_visible_words(
-            stdscr,
-            positions,
-            visible_start,
-            visible_end,
-            scroll_position,
-            cursor_pos,
-            height,
-            width,
-        )
+        self._display_visible_words(stdscr, positions, viewport, state.cursor)
 
         # Add scroll indicators if needed
-        self._add_scroll_indicators(stdscr, visible_start, visible_end, positions, height, width)
+        self._add_scroll_indicators(stdscr, viewport, len(positions))
 
         # Add command menu
-        self._add_menu(stdscr, height, is_last_reached)
+        self._add_menu(stdscr, height, state.reached_last)
 
         # Return number of visible words
-        result: int = visible_end - visible_start
+        result: int = viewport.end - viewport.start
         return result
 
     def _display_visible_words(
-        self,
-        stdscr: Any,
-        positions: List[int],
-        visible_start: int,
-        visible_end: int,
-        scroll_position: int,
-        cursor_pos: Optional[int],
-        height: int,
-        width: int,
+        self, stdscr: Any, positions: List[int], viewport: Viewport, cursor_pos: Optional[int]
     ) -> None:
         """
         Display the visible words on the screen.
@@ -259,26 +253,23 @@ class DisplayHandler:
         Args:
             stdscr: Curses window objec
             positions: List of word positions
-            visible_start: Index of first visible word
-            visible_end: Index of last visible word
-            scroll_position: Current scroll position
+            viewport: Current terminal viewport
             cursor_pos: Position of cursor (revealed word)
-            height: Terminal heigh
-            width: Terminal width
         """
-        for i, pos in enumerate(positions[visible_start:visible_end], visible_start):
+        for i, pos in enumerate(positions[viewport.start : viewport.end], viewport.start):
             try:
                 # Get word for the position
                 word = self._get_word_for_position(pos)
 
                 # Calculate position and check if it's visible
-                y_pos = i * 2 - scroll_position * 2
+                y_pos = i * 2 - viewport.start * 2
 
                 # Only render if within displayable area
-                if 0 <= y_pos < height - 6:
-                    display_num = i + 1
-                    is_revealed = cursor_pos == i
-                    self._render_word(stdscr, word, display_num, y_pos, is_revealed, width)
+                if 0 <= y_pos < viewport.height - 6:
+                    row = WordRow(
+                        word=word, display_num=i + 1, y_pos=y_pos, revealed=cursor_pos == i
+                    )
+                    self._render_word(stdscr, row, viewport.width)
 
             except curses.error:
                 # Handle rendering errors
@@ -333,6 +324,3 @@ class DisplayHandler:
 
         # Cursor is already visible
         return scroll_pos
-
-    # For backward compatibility with tests
-    handle_scroll = handle_autoscroll

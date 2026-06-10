@@ -62,6 +62,8 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - Proper screen transitions between modes
 - **Security Features**: 
   - Auto-timeout mechanisms (halfdelay for TTY, timeout for non-TTY)
+  - File logging is opt-in (--verbose only); no usage trail on disk by default
+  - User-entered values and positions are never written to logs
   - Mask/reveal functionality with secure timers
   - Secure memory handling and clipboard management
   - Input validation and sanitization
@@ -69,16 +71,16 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - Global fixtures in conftest.py for all tests
   - Comprehensive mocking of curses functionality
   - Isolated test environment with pytest
-  - 120 tests covering all components
-  - 89% code coverage, exceeding 85% threshold
+  - 124 tests covering all components
+  - 92% code coverage, exceeding 85% threshold
 - **Cognitive Complexity**: Maintained ≤15 per component through clean architecture
 - **CI/CD Pipeline**: GitHub Actions for automated testing, building and publishing
 - **Docker Support**: Minimal secure image with optimized layers
 
 ## Current Project Status
-- All tests are passing (120 tests)
-- Code coverage at 89%, exceeding required threshold of 85%
-- Pylint score: 9.77/10
+- All tests are passing (124 tests)
+- Code coverage at 92%, exceeding required threshold of 85%
+- Pylint score: 10.00/10
 - No type checking issues (mypy passes)
 - No functions with complexity over 15
 - UI improvements:

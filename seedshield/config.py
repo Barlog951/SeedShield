@@ -9,6 +9,7 @@ import os
 import logging
 import logging.handlers
 import sys
+from typing import Optional
 
 # Application constants
 APP_NAME = "SeedShield"
@@ -36,12 +37,18 @@ MENU_TEXT = {
 }
 
 
-def setup_logging(log_level: int = logging.INFO) -> logging.Logger:
+def setup_logging(
+    log_level: int = logging.WARNING, log_file: Optional[str] = None
+) -> logging.Logger:
     """
     Set up application logging with proper security measures.
 
+    File logging is opt-in: no usage trail is written to disk unless a log
+    file is explicitly requested (e.g. via the --verbose flag).
+
     Args:
-        log_level: Desired logging level (default: INFO)
+        log_level: Desired logging level (default: WARNING)
+        log_file: Optional path for file logging; None disables it
 
     Returns:
         logging.Logger: Configured logger instance
@@ -49,32 +56,38 @@ def setup_logging(log_level: int = logging.INFO) -> logging.Logger:
     log = logging.getLogger(APP_NAME)
     log.setLevel(log_level)
 
+    # Reconfiguring must not stack duplicate handlers
+    for handler in log.handlers[:]:
+        log.removeHandler(handler)
+        handler.close()
+
     # Console handler for error messages only
     console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(logging.ERROR)
     console_formatter = logging.Formatter("%(levelname)s: %(message)s")
     console_handler.setFormatter(console_formatter)
 
-    # File handler with rotation to prevent excessive log growth
-    try:
-        file_handler = logging.handlers.RotatingFileHandler(
-            DEFAULT_LOG_PATH, maxBytes=LOG_MAX_SIZE, backupCount=LOG_BACKUP_COUNT
-        )
-        file_handler.setLevel(log_level)
-        file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-        )
-        file_handler.setFormatter(file_formatter)
+    # File handler with rotation, only when explicitly requested
+    if log_file is not None:
+        try:
+            file_handler = logging.handlers.RotatingFileHandler(
+                log_file, maxBytes=LOG_MAX_SIZE, backupCount=LOG_BACKUP_COUNT
+            )
+            file_handler.setLevel(log_level)
+            file_formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            )
+            file_handler.setFormatter(file_formatter)
 
-        log.addHandler(file_handler)
-    except (PermissionError, IOError, OSError):
-        # Fall back to console-only logging if file logging fails
-        pass
+            log.addHandler(file_handler)
+        except (PermissionError, IOError, OSError):
+            # Fall back to console-only logging if file logging fails
+            pass
 
     log.addHandler(console_handler)
 
     return log
 
 
-# Create the application logger
+# Create the application logger (console-only; file logging is opt-in)
 logger = setup_logging()

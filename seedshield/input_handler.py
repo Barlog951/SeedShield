@@ -125,10 +125,36 @@ class InputHandler:
             if 1 <= num <= self.word_count:
                 return [num]
 
-            logger.debug("Input number %s out of valid range (1-%s)", num, self.word_count)
+            # Never log the entered value: positions encode the seed
+            logger.debug("Input number out of valid range (1-%s)", self.word_count)
         except ValueError:
-            logger.debug("Invalid non-integer input: %s", input_str)
+            logger.debug("Invalid non-integer input")
         return None
+
+    @staticmethod
+    def _validate_readable_file(file_path: str) -> bool:
+        """
+        Check that the path exists, is a regular file, and is readable.
+
+        Args:
+            file_path: Path to validate
+
+        Returns:
+            bool: True if the file can be read
+        """
+        if not os.path.exists(file_path):
+            logger.error("File not found: %s", file_path)
+            return False
+
+        if not os.path.isfile(file_path):
+            logger.error("Not a file: %s", file_path)
+            return False
+
+        if not os.access(file_path, os.R_OK):
+            logger.error("No read permission for file: %s", file_path)
+            return False
+
+        return True
 
     def load_positions_from_file(self, file_path: str) -> Optional[List[int]]:
         """
@@ -140,27 +166,17 @@ class InputHandler:
         Returns:
             Optional[List[int]]: List of valid position numbers or None if error
         """
-        # Security check: validate file path
-        if not os.path.exists(file_path):
-            logger.error("File not found: %s", file_path)
-            return None
-
-        if not os.path.isfile(file_path):
-            logger.error("Not a file: %s", file_path)
+        if not self._validate_readable_file(file_path):
             return None
 
         try:
-            # Check read permissions
-            if not os.access(file_path, os.R_OK):
-                logger.error("No read permission for file: %s", file_path)
-                return None
-
             positions = []
             with open(file_path, "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
+                    # Never log line contents or values: positions encode the seed
                     if not line or not line.isdigit():
-                        logger.warning("Skipping invalid content at line %s: '%s'", line_num, line)
+                        logger.warning("Skipping invalid content at line %s", line_num)
                         continue
 
                     num = int(line)
@@ -168,9 +184,8 @@ class InputHandler:
                         positions.append(num)
                     else:
                         logger.warning(
-                            "Skipping out-of-range number at line %s: %s " "(valid range: 1-%s)",
+                            "Skipping out-of-range number at line %s (valid range: 1-%s)",
                             line_num,
-                            num,
                             self.word_count,
                         )
 

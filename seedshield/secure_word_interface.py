@@ -7,22 +7,33 @@ with masking, timed reveals, and memory safety features.
 
 import time
 import curses
-from typing import List, Optional, Tuple, Any, Callable
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Any
 
 from .input_handler import InputHandler
-from .display_handler import DisplayHandler
+from .display_handler import DisplayHandler, DisplayState
 from .state_handler import StateHandler
 from .ui_manager import UIManager
 from .secure_memory import secure_clear_list
 from .config import logger, DEFAULT_WORDLIST_FULLPATH
 
 
-class SecureWordInterface:
+@dataclass(frozen=True)
+class ViewContext:
+    """View state for one pass of the display loop."""
+
+    scroll: int
+    visible_count: int
+    now: float
+
+
+class SecureWordInterface:  # pylint: disable=too-few-public-methods
     """
     Main controller class for the secure word viewing interface.
 
     This class coordinates the input, display, and state handlers to provide
-    a secure interface for viewing sensitive seed phrases.
+    a secure interface for viewing sensitive seed phrases. It is a facade:
+    run() is deliberately its only public entry point.
     """
 
     def __init__(
@@ -35,7 +46,6 @@ class SecureWordInterface:
             wordlist_path: Path to the wordlist file
             ui_manager: Optional UI manager for terminal handling
         """
-        # For backward compatibility with tests that don't pass the ui_manager
         self.ui_manager = ui_manager if ui_manager is not None else UIManager()
         self.words: List[str] = []
 
@@ -48,15 +58,6 @@ class SecureWordInterface:
         self.state_handler = StateHandler()
         # Set state_handler reference in display_handler
         self.display_handler.state_handler = self.state_handler
-
-        # For backward compatibility with tests
-        self._initialize_curses = self.ui_manager.initialize
-        self._cleanup_curses = self.ui_manager.cleanup
-
-        # Extract complex lambda expressions to improve readability
-        self._handle_autoscroll = self._get_handle_autoscroll_func()
-        self._handle_commands = self._backwards_compat_handle_commands
-        self._load_positions_from_file = self._get_load_positions_func()
 
         logger.debug("SecureWordInterface initialized")
 
@@ -144,7 +145,7 @@ class SecureWordInterface:
 
         # Display words with current state
         visible_count = self.display_handler.display_words(
-            stdscr, positions, scroll_position, cursor_pos, reached_last
+            stdscr, positions, DisplayState(scroll_position, cursor_pos, reached_last)
         )
 
         # Handle any autoscrolling needed to keep the cursor in view
@@ -157,42 +158,8 @@ class SecureWordInterface:
 
         return visible_count, scroll_position
 
-    def _backwards_compat_handle_commands(
-        self, key: int, positions: List[int], current_time: float, scroll_position: int
-    ) -> Tuple[bool, List[int], int]:
-        """
-        Backward compatibility method for tests.
-
-        Args:
-            key: Key code
-            positions: List of positions
-            current_time: Current time
-            scroll_position: Current scroll position
-
-        Returns:
-            Tuple[bool, List[int], int]: Whether to reinit, new positions, new scroll
-        """
-        should_reinit = False
-        new_scroll = scroll_position
-        new_positions: List[int] = []
-
-        command_result = self.state_handler.handle_commands(key, positions, current_time)
-        if command_result is not None:
-            new_positions = command_result
-        if key == ord("r"):
-            new_scroll = 0
-        if key == ord("n"):
-            should_reinit = True
-
-        return should_reinit, new_positions, new_scroll
-
     def _process_user_input(
-        self,
-        stdscr: Any,
-        positions: List[int],
-        scroll_position: int,
-        visible_count: int,
-        current_time: float,
+        self, stdscr: Any, positions: List[int], view: ViewContext
     ) -> Tuple[bool, int]:
         """
         Process user input and update state accordingly.
@@ -200,13 +167,12 @@ class SecureWordInterface:
         Args:
             stdscr: Curses window objec
             positions: List of word positions
-            scroll_position: Current scroll position
-            visible_count: Number of visible words
-            current_time: Current timestamp
+            view: Current view state
 
         Returns:
             Tuple[bool, int]: Whether to continue and new scroll position
         """
+        scroll_position = view.scroll
         try:
             # Get user input with timeout
             c = stdscr.getch()
@@ -214,7 +180,7 @@ class SecureWordInterface:
             # Process input if available
             if c != -1:
                 should_quit, should_reinit, new_scroll, new_positions = self._handle_user_input(
-                    c, positions, scroll_position, visible_count, current_time
+                    c, positions, view
                 )
 
                 # Handle timeout adjustment for input mode
@@ -252,26 +218,23 @@ class SecureWordInterface:
         logger.debug("Quit command received")
         return True, False, 0, []
 
-    def _handle_navigation(
-        self, key: int, positions: List[int], scroll_position: int, visible_count: int
-    ) -> int:
+    def _handle_navigation(self, key: int, positions: List[int], view: ViewContext) -> int:
         """
         Handle navigation key inputs.
 
         Args:
             key: Input key code
             positions: List of positions
-            scroll_position: Current scroll position
-            visible_count: Number of visible positions
+            view: Current view state
 
         Returns:
             int: New scroll position
         """
         logger.debug("Navigation key received: %s", "UP" if key == curses.KEY_UP else "DOWN")
-        return self.state_handler.handle_navigation(key, positions, scroll_position, visible_count)
+        return self.state_handler.handle_navigation(key, positions, view.scroll, view.visible_count)
 
     def _handle_command_keys(
-        self, key: int, positions: List[int], current_time: float, scroll_position: int
+        self, key: int, positions: List[int], view: ViewContext
     ) -> Tuple[bool, int, List[int]]:
         """
         Handle command keys (n, s, r).
@@ -279,18 +242,17 @@ class SecureWordInterface:
         Args:
             key: Input key code
             positions: List of positions
-            current_time: Current timestamp
-            scroll_position: Current scroll position
+            view: Current view state
 
         Returns:
             Tuple[bool, int, List[int]]: Reinitialize flag, new scroll position, new positions
         """
         should_reinit = False
-        new_scroll = scroll_position
+        new_scroll = view.scroll
         new_positions: List[int] = []
 
         logger.debug("Command key received: '%s'", chr(key))
-        command_result = self.state_handler.handle_commands(key, positions, current_time)
+        command_result = self.state_handler.handle_commands(key, positions, view.now)
 
         if command_result is not None:
             new_positions = command_result
@@ -303,35 +265,27 @@ class SecureWordInterface:
 
         return should_reinit, new_scroll, new_positions
 
-    def _handle_mouse_event(
-        self, positions: List[int], scroll_position: int, current_time: float
-    ) -> None:
+    def _handle_mouse_event(self, positions: List[int], view: ViewContext) -> None:
         """
         Handle mouse events for word revealing.
 
         Args:
             positions: List of positions
-            scroll_position: Current scroll position
-            current_time: Current timestamp
+            view: Current view state
         """
         try:
             mouse_event = curses.getmouse()
             _, _, my, _, _ = mouse_event
-            visible_index = my // 2 + scroll_position
+            visible_index = my // 2 + view.scroll
 
             if 0 <= visible_index < len(positions):
                 logger.debug("Mouse reveal at index %s", visible_index)
-                self.state_handler.handle_mouse_reveal(visible_index, current_time)
+                self.state_handler.handle_mouse_reveal(visible_index, view.now)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug("Error handling mouse event: %s", str(e))
 
     def _handle_user_input(
-        self,
-        c: int,
-        positions: List[int],
-        scroll_position: int,
-        visible_count: int,
-        current_time: float,
+        self, c: int, positions: List[int], view: ViewContext
     ) -> Tuple[bool, bool, int, List[int]]:
         """
         Process a single user input and determine actions.
@@ -339,9 +293,7 @@ class SecureWordInterface:
         Args:
             c: Input character code
             positions: List of word positions
-            scroll_position: Current scroll position
-            visible_count: Number of visible words
-            current_time: Current timestamp
+            view: Current view state
 
         Returns:
             Tuple[bool, bool, int, List[int]]:
@@ -351,7 +303,7 @@ class SecureWordInterface:
         # Initialize default return values
         should_quit = False
         should_reinit = False
-        new_scroll = scroll_position
+        new_scroll = view.scroll
         new_positions: List[int] = []
 
         # Handle different input types
@@ -359,26 +311,16 @@ class SecureWordInterface:
             should_quit, should_reinit, new_scroll, new_positions = self._handle_quit_command()
 
         elif c in (curses.KEY_UP, curses.KEY_DOWN):
-            new_scroll = self._handle_navigation(c, positions, scroll_position, visible_count)
+            new_scroll = self._handle_navigation(c, positions, view)
 
         elif c in (ord("n"), ord("s"), ord("r")):
-            should_reinit, new_scroll, new_positions = self._handle_command_keys(
-                c, positions, current_time, scroll_position
-            )
+            should_reinit, new_scroll, new_positions = self._handle_command_keys(c, positions, view)
 
         elif c == curses.KEY_MOUSE:
-            self._handle_mouse_event(positions, scroll_position, current_time)
+            self._handle_mouse_event(positions, view)
 
         # Return all state changes
         return should_quit, should_reinit, new_scroll, new_positions
-
-    def _get_load_positions_func(self) -> Callable[[str], Optional[List[int]]]:
-        """Return a function that loads positions from a file."""
-        return self.input_handler.load_positions_from_file
-
-    def _get_handle_autoscroll_func(self) -> Callable[[Optional[int], int, int], int]:
-        """Return a function that handles autoscrolling."""
-        return self.display_handler.handle_autoscroll
 
     def _load_positions_file(self, file_path: str) -> List[int]:
         """
@@ -439,7 +381,7 @@ class SecureWordInterface:
             )
 
             should_continue, scroll_position = self._process_user_input(
-                stdscr, positions, scroll_position, visible_count, current_time
+                stdscr, positions, ViewContext(scroll_position, visible_count, current_time)
             )
 
             if not should_continue:

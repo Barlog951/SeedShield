@@ -23,7 +23,7 @@ class PreBuild(_build_py):
 
 setup(
     name="seedshield",
-    version="0.2.3",  # This should match VERSION in seedshield/config.py
+    # Version comes from seedshield/config.py via pyproject.toml dynamic metadata
 
     packages=find_namespace_packages(
         include=['seedshield', 'seedshield.*']

@@ -4,7 +4,8 @@ import sys
 import pytest
 from pytest import mark
 from unittest.mock import patch, MagicMock
-from seedshield.secure_word_interface import SecureWordInterface
+from seedshield.display_handler import DisplayState
+from seedshield.secure_word_interface import SecureWordInterface, ViewContext
 
 # Test fixtures are imported from root conftest.py
 
@@ -14,7 +15,7 @@ def test_interface_initialization(test_wordlist):
     interface = SecureWordInterface(test_wordlist)
     assert len(interface.words) == 4
     assert interface.words[0] == "apple"
-    assert interface.display_handler.legacy_mask == "*****"
+    assert interface.display_handler.mask == "*****"
     assert interface.state_handler.reached_last is False
 
 
@@ -193,9 +194,9 @@ def test_auto_scroll_sequential_reveal(mock_curses, mock_stdscr):
             visible_count = interface.display_handler.display_words(
                 mock_stdscr,
                 positions,
-                0,
-                interface.state_handler.cursor_pos,
-                interface.state_handler.reached_last,
+                DisplayState(
+                    0, interface.state_handler.cursor_pos, interface.state_handler.reached_last
+                ),
             )
             assert visible_count > 0
 
@@ -209,13 +210,17 @@ def test_scroll_boundaries_with_sequential_reveal(mock_curses, mock_stdscr):
     mock_stdscr.getmaxyx.return_value = (10, 80)
 
     interface.state_handler.cursor_pos = 0
-    visible_count = interface.display_handler.display_words(mock_stdscr, positions, 0, 0, False)
+    visible_count = interface.display_handler.display_words(
+        mock_stdscr, positions, DisplayState(0, 0, False)
+    )
     assert visible_count > 0
 
     interface.state_handler.cursor_pos = len(positions) - 1
     scroll_position = max(0, len(positions) - visible_count)
     visible_count = interface.display_handler.display_words(
-        mock_stdscr, positions, scroll_position, interface.state_handler.cursor_pos, True
+        mock_stdscr,
+        positions,
+        DisplayState(scroll_position, interface.state_handler.cursor_pos, True),
     )
     assert visible_count > 0
     assert scroll_position + visible_count >= len(positions)
@@ -236,9 +241,11 @@ def test_scroll_interaction_with_reveal_timeout(mock_curses, mock_stdscr):
     interface.display_handler.display_words(
         mock_stdscr,
         positions,
-        scroll_position,
-        interface.state_handler.cursor_pos,
-        interface.state_handler.reached_last,
+        DisplayState(
+            scroll_position,
+            interface.state_handler.cursor_pos,
+            interface.state_handler.reached_last,
+        ),
     )
     initial_scroll = scroll_position
 
@@ -248,9 +255,11 @@ def test_scroll_interaction_with_reveal_timeout(mock_curses, mock_stdscr):
     interface.display_handler.display_words(
         mock_stdscr,
         positions,
-        scroll_position,
-        interface.state_handler.cursor_pos,
-        interface.state_handler.reached_last,
+        DisplayState(
+            scroll_position,
+            interface.state_handler.cursor_pos,
+            interface.state_handler.reached_last,
+        ),
     )
     assert interface.state_handler.cursor_pos is None
     assert scroll_position == initial_scroll
@@ -291,9 +300,7 @@ def test_reset_maintain_word_list(mock_curses, mock_stdscr):
     visible_count = interface.display_handler.display_words(
         mock_stdscr,
         positions,
-        0,
-        interface.state_handler.cursor_pos,
-        interface.state_handler.reached_last,
+        DisplayState(0, interface.state_handler.cursor_pos, interface.state_handler.reached_last),
     )
 
     assert positions == original_positions
@@ -343,7 +350,7 @@ def test_process_user_input_error(mock_curses):
 
     with patch("time.sleep") as mock_sleep:
         result, scroll_pos = interface._process_user_input(
-            mock_stdscr, positions, 0, 3, time.time()
+            mock_stdscr, positions, ViewContext(0, 3, time.time())
         )
         assert result is True
         assert scroll_pos == 0
@@ -403,7 +410,7 @@ def test_process_user_input_curses_error(mock_curses):
 
     with patch("time.sleep") as mock_sleep:
         result, scroll_pos = interface._process_user_input(
-            mock_stdscr, positions, 0, 3, time.time()
+            mock_stdscr, positions, ViewContext(0, 3, time.time())
         )
         assert result is True
         assert scroll_pos == 0
@@ -433,13 +440,13 @@ def test_scrolling_up_down():
 
     # Test scroll down
     _, new_scroll = interface._process_user_input(
-        mock_stdscr, positions, scroll_position, visible_count, time.time()
+        mock_stdscr, positions, ViewContext(scroll_position, visible_count, time.time())
     )
     assert new_scroll == scroll_position
 
     # Test scroll up
     _, new_scroll = interface._process_user_input(
-        mock_stdscr, positions, scroll_position, visible_count, time.time()
+        mock_stdscr, positions, ViewContext(scroll_position, visible_count, time.time())
     )
     assert new_scroll == scroll_position
 
@@ -455,14 +462,14 @@ def test_scroll_boundaries():
     # Test at top boundary
     mock_stdscr.getch.return_value = curses.KEY_UP
     _, new_scroll = interface._process_user_input(
-        mock_stdscr, positions, 0, visible_count, time.time()
+        mock_stdscr, positions, ViewContext(0, visible_count, time.time())
     )
     assert new_scroll == 0
 
     # Test at bottom boundary
     mock_stdscr.getch.return_value = curses.KEY_DOWN
     _, new_scroll = interface._process_user_input(
-        mock_stdscr, positions, 5, visible_count, time.time()
+        mock_stdscr, positions, ViewContext(5, visible_count, time.time())
     )
     assert new_scroll == 5
 
@@ -480,14 +487,14 @@ def test_scroll_position_persistence():
     mock_stdscr.getch.return_value = curses.KEY_MOUSE
     mock_stdscr.getmouse.return_value = (0, 0, 2, 0, 0)
     _, new_scroll = interface._process_user_input(
-        mock_stdscr, positions, scroll_position, visible_count, time.time()
+        mock_stdscr, positions, ViewContext(scroll_position, visible_count, time.time())
     )
     assert new_scroll == scroll_position
 
     # Test scroll persistence after sequential reveal
     mock_stdscr.getch.return_value = ord("s")
     _, new_scroll = interface._process_user_input(
-        mock_stdscr, positions, scroll_position, visible_count, time.time()
+        mock_stdscr, positions, ViewContext(scroll_position, visible_count, time.time())
     )
     assert new_scroll == scroll_position
 
@@ -500,7 +507,7 @@ def test_init_with_missing_file():
 def test_process_input_with_no_positions():
     mock_stdscr = MagicMock()
     interface = SecureWordInterface()
-    result, scroll = interface._process_user_input(mock_stdscr, [], 0, 5, time.time())
+    result, scroll = interface._process_user_input(mock_stdscr, [], ViewContext(0, 5, time.time()))
     assert result is True
     assert scroll == 0
 
@@ -512,14 +519,14 @@ def test_handle_commands_with_all_types():
 
     # Test 'n' command
     should_quit, should_reinit, new_scroll, new_positions = interface._handle_user_input(
-        ord("n"), positions, 0, 3, current_time
+        ord("n"), positions, ViewContext(0, 3, current_time)
     )
     assert should_reinit is True
     assert new_scroll == 0
 
     # Test 'r' command
     should_quit, should_reinit, new_scroll, new_positions = interface._handle_user_input(
-        ord("r"), positions, 5, 3, current_time
+        ord("r"), positions, ViewContext(5, 3, current_time)
     )
     assert new_scroll == 0
 

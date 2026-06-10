@@ -22,7 +22,14 @@ import logging
 from typing import Optional
 
 from .secure_word_interface import SecureWordInterface
-from .config import logger, setup_logging, DEFAULT_WORDLIST_PATH, APP_NAME, VERSION
+from .config import (
+    logger,
+    setup_logging,
+    DEFAULT_WORDLIST_PATH,
+    DEFAULT_LOG_PATH,
+    APP_NAME,
+    VERSION,
+)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -42,7 +49,12 @@ def parse_arguments() -> argparse.Namespace:
         help=f"Path to wordlist file (default: {DEFAULT_WORDLIST_PATH})",
     )
     parser.add_argument("-i", "--input", help="Input file with positions")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help=f"Enable verbose logging to {DEFAULT_LOG_PATH} (off by default)",
+    )
     parser.add_argument("--version", action="version", version=f"{APP_NAME} v{VERSION}")
 
     return parser.parse_args()
@@ -88,9 +100,11 @@ def main() -> None:
     # Parse command line arguments
     args = parse_arguments()
 
-    # Configure logging level based on verbose flag
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    setup_logging(log_level)
+    # File logging only when explicitly requested; no usage trail otherwise
+    if args.verbose:
+        setup_logging(logging.DEBUG, log_file=DEFAULT_LOG_PATH)
+    else:
+        setup_logging(logging.WARNING)
 
     logger.info("Starting %s v%s", APP_NAME, VERSION)
 

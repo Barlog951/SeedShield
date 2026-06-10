@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SeedShield"
-version = "0.2.3"
+dynamic = ["version"]
 readme = { file = "README.md", content-type = "text/markdown" }
 description = "Secure BIP39 word viewer with masking and reveal functionality"
 license = {text = "MIT"}
@@ -54,9 +54,16 @@ dev = [
 [project.scripts]
 seedshield = "seedshield.main:main"
 
+[tool.setuptools.dynamic]
+# Single source of truth for the version; semantic-release updates config.py
+version = {attr = "seedshield.config.VERSION"}
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 markers = [
     "timeout: mark test with timeout value in seconds"
 ]
