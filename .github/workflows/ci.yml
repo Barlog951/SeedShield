@@ -181,6 +181,9 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+          # Pushes to main without a new release rebuild the latest tag;
+          # re-uploading an existing version must be a no-op, not a failure
+          skip-existing: true
 
   build-docker:
     needs: [release, security-scan]
