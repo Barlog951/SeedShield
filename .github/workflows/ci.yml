@@ -32,11 +32,16 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 = supported floor, 3.12 = primary, 3.14 = Docker runtime
+        python-version: ['3.10', '3.12', '3.14']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install dependencies
@@ -50,23 +55,26 @@ jobs:
         run: pytest -v --junitxml=report.xml
 
       - name: Run coverage
+        if: matrix.python-version == '3.12'
         run: |
           pytest --cov=seedshield --cov-report term-missing --cov-report xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
           coverage report --fail-under=85
 
       - name: Quality checks
+        if: matrix.python-version == '3.12'
         run: |
           pylint seedshield || exit $(( $? & 35 ))
           flake8 seedshield
           mypy seedshield
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v7
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.python-version == '3.12' }}
         uses: codecov/test-results-action@v1
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -78,8 +86,8 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v3
+      - uses: actions/checkout@v6
+      - uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
 
@@ -90,8 +98,8 @@ jobs:
       contents: read
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -112,13 +120,13 @@ jobs:
     outputs:
       new-version: ${{ steps.get_new_version.outputs.NEW_VERSION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 'lts/*'
 
@@ -161,13 +169,13 @@ jobs:
       - name: Print new version
         run: echo "Version is ${{ needs.release.outputs.new-version }}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
           ref: "refs/tags/${{ needs.release.outputs.new-version }}"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -178,7 +186,7 @@ jobs:
         run: python -m build
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.13.0
+        uses: pypa/gh-action-pypi-publish@v1.14.0
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           # Pushes to main without a new release rebuild the latest tag;
@@ -196,31 +204,31 @@ jobs:
       - name: Print new version
         run: echo "Version is ${{ needs.release.outputs.new-version }}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
           ref: "refs/tags/${{ needs.release.outputs.new-version }}"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Get version from pyproject.toml
+      - name: Get version from seedshield/config.py
         run: |
-          VERSION=$(grep -m1 "version = " pyproject.toml | sed 's/version = //g' | tr -d '"' | tr -d "'")
+          VERSION=$(grep -o 'VERSION = "[0-9.]*"' seedshield/config.py | grep -o '[0-9.]*')
           echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
@@ -238,7 +246,7 @@ jobs:
     if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
     steps:
       - name: Create Issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.create({

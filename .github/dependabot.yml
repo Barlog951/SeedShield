@@ -27,3 +27,16 @@ updates:
       prefix: "fix(deps)"
     open-pull-requests-limit: 10
     rebase-strategy: "auto"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "Barlog951"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"

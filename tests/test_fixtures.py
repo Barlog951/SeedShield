@@ -6,12 +6,16 @@ import tempfile
 
 @pytest.fixture
 def mock_curses():
-    with patch("curses.initscr"), patch("curses.endwin"), patch("curses.start_color"), patch(
-        "curses.mousemask"
-    ), patch("curses.noecho"), patch("curses.echo"), patch("curses.cbreak"), patch(
-        "curses.nocbreak"
-    ), patch(
-        "curses.halfdelay"
+    with (
+        patch("curses.initscr"),
+        patch("curses.endwin"),
+        patch("curses.start_color"),
+        patch("curses.mousemask"),
+        patch("curses.noecho"),
+        patch("curses.echo"),
+        patch("curses.cbreak"),
+        patch("curses.nocbreak"),
+        patch("curses.halfdelay"),
     ):
         yield
 

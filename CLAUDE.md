@@ -71,14 +71,14 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - Global fixtures in conftest.py for all tests
   - Comprehensive mocking of curses functionality
   - Isolated test environment with pytest
-  - 124 tests covering all components
+  - 128 tests covering all components
   - 92% code coverage, exceeding 85% threshold
 - **Cognitive Complexity**: Maintained ≤15 per component through clean architecture
 - **CI/CD Pipeline**: GitHub Actions for automated testing, building and publishing
 - **Docker Support**: Minimal secure image with optimized layers
 
 ## Current Project Status
-- All tests are passing (124 tests)
+- All tests are passing (128 tests)
 - Code coverage at 92%, exceeding required threshold of 85%
 - Pylint score: 10.00/10
 - No type checking issues (mypy passes)

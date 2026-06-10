@@ -36,30 +36,23 @@ def mock_curses():
     mock.COLORS = 8
     mock.COLOR_PAIRS = 64
 
-    with patch("curses.initscr", return_value=mock), patch("curses.start_color"), patch(
-        "curses.init_pair"
-    ), patch("curses.COLOR_WHITE", 0), patch("curses.COLOR_BLACK", 0), patch(
-        "curses.halfdelay", mock.halfdelay
-    ), patch(
-        "curses.echo", mock.echo
-    ), patch(
-        "curses.noecho", mock.noecho
-    ), patch(
-        "curses.endwin", mock.endwin
-    ), patch(
-        "curses.cbreak", mock.cbreak
-    ), patch(
-        "curses.nocbreak", mock.nocbreak
-    ), patch(
-        "curses.mousemask", mock.mousemask
-    ), patch(
-        "curses.getmouse", mock.getmouse
-    ), patch(
-        "curses.ALL_MOUSE_EVENTS", mock.ALL_MOUSE_EVENTS
-    ), patch(
-        "curses.REPORT_MOUSE_POSITION", mock.REPORT_MOUSE_POSITION
-    ), patch(
-        "curses.A_REVERSE", mock.A_REVERSE
+    with (
+        patch("curses.initscr", return_value=mock),
+        patch("curses.start_color"),
+        patch("curses.init_pair"),
+        patch("curses.COLOR_WHITE", 0),
+        patch("curses.COLOR_BLACK", 0),
+        patch("curses.halfdelay", mock.halfdelay),
+        patch("curses.echo", mock.echo),
+        patch("curses.noecho", mock.noecho),
+        patch("curses.endwin", mock.endwin),
+        patch("curses.cbreak", mock.cbreak),
+        patch("curses.nocbreak", mock.nocbreak),
+        patch("curses.mousemask", mock.mousemask),
+        patch("curses.getmouse", mock.getmouse),
+        patch("curses.ALL_MOUSE_EVENTS", mock.ALL_MOUSE_EVENTS),
+        patch("curses.REPORT_MOUSE_POSITION", mock.REPORT_MOUSE_POSITION),
+        patch("curses.A_REVERSE", mock.A_REVERSE),
     ):
         yield mock
 

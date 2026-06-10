@@ -6,17 +6,41 @@ data like seed phrases from persisting in memory longer than necessary.
 """
 
 import ctypes
-from typing import Any, List
+import sys
+from typing import Any, List, Optional
 import secrets
 
 from .config import logger
+
+
+def _ascii_buffer_offset(string_var: str) -> Optional[int]:
+    """
+    Locate the inline character buffer of a CPython compact ASCII string.
+
+    Compact ASCII strings store their bytes inline at the end of the object,
+    followed by a NUL terminator, so the buffer starts at
+    sizeof(object) - len - 1. Writing anywhere before that offset would
+    corrupt the object header (refcount/type) and crash the interpreter.
+
+    Args:
+        string_var: String to inspect
+
+    Returns:
+        Optional[int]: Buffer offset from the object address, or None if the
+            string does not use the compact ASCII layout
+    """
+    if not string_var.isascii():
+        return None
+
+    offset = sys.getsizeof(string_var) - len(string_var) - 1
+    return offset if offset > 0 else None
 
 
 def secure_clear_string(string_var: str) -> None:
     """
     Attempt to securely clear a string from memory.
 
-    This function tries to overwrite the memory location of a string
+    This function tries to overwrite the character buffer of a string
     with random data before releasing the reference. Note that Python's
     garbage collection means this isn't guaranteed to fully remove the
     data from memory immediately.
@@ -24,10 +48,11 @@ def secure_clear_string(string_var: str) -> None:
     Args:
         string_var: String to be securely cleared
     """
-    if not isinstance(string_var, str) or not string_var:
+    # Strings shorter than 2 chars may be interpreter-cached singletons
+    # shared across the whole process; never overwrite those
+    if not isinstance(string_var, str) or len(string_var) < 2:
         return
 
-    # Get the memory address of the string
     try:
         # Generate random data to overwrite with
         random_data = "".join(chr(secrets.randbelow(128)) for _ in range(len(string_var)))
@@ -37,13 +62,14 @@ def secure_clear_string(string_var: str) -> None:
         if hasattr(string_var, "_wa_"):  # For PyPy
             string_var._wa_[:] = random_data  # pylint: disable=protected-access
         else:
-            # For CPython, try to access the internal buffer
-            # This is a best-effort approach
-            addr = id(string_var)
+            # For CPython, overwrite only the inline character buffer;
+            # touching the object header crashes the GC (verified on 3.14)
+            offset = _ascii_buffer_offset(string_var)
+            if offset is None:
+                logger.debug("Secure string clearing skipped: unsupported string layout")
+                return
 
-            # Overwrite with random data
-            # This relies on implementation details and is not guaranteed to work
-            ctypes.memmove(addr, random_data.encode("utf-8"), len(string_var))
+            ctypes.memmove(id(string_var) + offset, random_data.encode("ascii"), len(string_var))
     except (AttributeError, TypeError, ValueError) as e:
         # Log error but don't raise - best effort only
         logger.debug("Secure string clearing failed: %s", str(e))

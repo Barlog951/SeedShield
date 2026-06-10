@@ -169,8 +169,9 @@ def test_parse_arguments_version():
 
 def test_validate_wordlist_path_default():
     """Test validate_wordlist_path with default path."""
-    with patch("os.path.dirname", return_value="/app"), patch(
-        "os.path.join", return_value="/app/data/english.txt"
+    with (
+        patch("os.path.dirname", return_value="/app"),
+        patch("os.path.join", return_value="/app/data/english.txt"),
     ):
         path = validate_wordlist_path(DEFAULT_WORDLIST_PATH)
 
@@ -179,9 +180,11 @@ def test_validate_wordlist_path_default():
 
 def test_validate_wordlist_path_custom_valid():
     """Test validate_wordlist_path with valid custom path."""
-    with patch("os.path.exists", return_value=True), patch(
-        "os.path.isfile", return_value=True
-    ), patch("os.access", return_value=True):
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.path.isfile", return_value=True),
+        patch("os.access", return_value=True),
+    ):
         path = validate_wordlist_path("custom_wordlist.txt")
 
         assert path == "custom_wordlist.txt"
@@ -189,9 +192,10 @@ def test_validate_wordlist_path_custom_valid():
 
 def test_validate_wordlist_path_nonexistent():
     """Test validate_wordlist_path with nonexistent file."""
-    with patch("os.path.exists", return_value=False), patch(
-        "seedshield.main.logger"
-    ) as mock_logger:
+    with (
+        patch("os.path.exists", return_value=False),
+        patch("seedshield.main.logger") as mock_logger,
+    ):
         path = validate_wordlist_path("nonexistent.txt")
 
         assert path is None
@@ -200,9 +204,11 @@ def test_validate_wordlist_path_nonexistent():
 
 def test_validate_wordlist_path_not_a_file():
     """Test validate_wordlist_path with path that is not a file."""
-    with patch("os.path.exists", return_value=True), patch(
-        "os.path.isfile", return_value=False
-    ), patch("seedshield.main.logger") as mock_logger:
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.path.isfile", return_value=False),
+        patch("seedshield.main.logger") as mock_logger,
+    ):
         path = validate_wordlist_path("directory/")
 
         assert path is None
@@ -211,9 +217,12 @@ def test_validate_wordlist_path_not_a_file():
 
 def test_validate_wordlist_path_not_readable():
     """Test validate_wordlist_path with file that is not readable."""
-    with patch("os.path.exists", return_value=True), patch(
-        "os.path.isfile", return_value=True
-    ), patch("os.access", return_value=False), patch("seedshield.main.logger") as mock_logger:
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.path.isfile", return_value=True),
+        patch("os.access", return_value=False),
+        patch("seedshield.main.logger") as mock_logger,
+    ):
         path = validate_wordlist_path("unreadable.txt")
 
         assert path is None
@@ -224,11 +233,12 @@ def test_validate_wordlist_path_not_readable():
 
 def test_main_invalid_wordlist():
     """Test main() with invalid wordlist path."""
-    with patch("seedshield.main.parse_arguments") as mock_parse_args, patch(
-        "seedshield.main.validate_wordlist_path", return_value=None
-    ), patch("sys.stderr", new_callable=MagicMock()) as mock_stderr, patch(
-        "sys.exit", side_effect=SystemExit()
-    ) as mock_exit:
+    with (
+        patch("seedshield.main.parse_arguments") as mock_parse_args,
+        patch("seedshield.main.validate_wordlist_path", return_value=None),
+        patch("sys.stderr", new_callable=MagicMock()) as mock_stderr,
+        patch("sys.exit", side_effect=SystemExit()) as mock_exit,
+    ):
 
         # Configure the mock arguments
         mock_args = MagicMock()
@@ -250,13 +260,13 @@ def test_main_invalid_wordlist():
 
 def test_main_invalid_input_file():
     """Test main() with invalid input file."""
-    with patch("seedshield.main.parse_arguments") as mock_parse_args, patch(
-        "seedshield.main.validate_wordlist_path", return_value="valid_wordlist.txt"
-    ), patch("os.path.exists", return_value=False), patch(
-        "sys.stderr", new_callable=MagicMock()
-    ) as mock_stderr, patch(
-        "sys.exit", side_effect=SystemExit()
-    ) as mock_exit:
+    with (
+        patch("seedshield.main.parse_arguments") as mock_parse_args,
+        patch("seedshield.main.validate_wordlist_path", return_value="valid_wordlist.txt"),
+        patch("os.path.exists", return_value=False),
+        patch("sys.stderr", new_callable=MagicMock()) as mock_stderr,
+        patch("sys.exit", side_effect=SystemExit()) as mock_exit,
+    ):
 
         # Configure the mock arguments
         mock_args = MagicMock()
@@ -278,9 +288,12 @@ def test_main_invalid_input_file():
 
 def test_main_keyboard_interrupt():
     """Test main() handles keyboard interrupt."""
-    with patch("seedshield.main.SecureWordInterface") as MockSecureInterface, patch(
-        "seedshield.main.validate_wordlist_path", return_value="valid_wordlist.txt"
-    ), patch("sys.exit") as mock_exit, patch("seedshield.main.logger") as mock_logger:
+    with (
+        patch("seedshield.main.SecureWordInterface") as MockSecureInterface,
+        patch("seedshield.main.validate_wordlist_path", return_value="valid_wordlist.txt"),
+        patch("sys.exit") as mock_exit,
+        patch("seedshield.main.logger") as mock_logger,
+    ):
 
         mock_instance = MockSecureInterface.return_value
         mock_instance.run.side_effect = KeyboardInterrupt()

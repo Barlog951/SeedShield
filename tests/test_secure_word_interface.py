@@ -106,8 +106,9 @@ def test_input_handling_with_timeout(mock_curses, mock_stdscr):
 @mark.timeout(5)
 def test_run_with_file_input(test_positions, mock_curses, mock_stdscr):
     """Test running with file input in non-TTY mode."""
-    with patch("sys.stdin.isatty", return_value=False), patch(
-        "curses.initscr", return_value=mock_stdscr
+    with (
+        patch("sys.stdin.isatty", return_value=False),
+        patch("curses.initscr", return_value=mock_stdscr),
     ):
         interface = SecureWordInterface()
         mock_stdscr.getch.side_effect = [ord("q")]

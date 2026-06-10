@@ -52,8 +52,9 @@ class TestUIManager:
         # Using our own custom mocks to make sure the test works
         mock_halfdelay = MagicMock()
 
-        with patch("sys.stdin.isatty", return_value=True), patch(
-            "seedshield.ui_manager.curses.halfdelay", mock_halfdelay
+        with (
+            patch("sys.stdin.isatty", return_value=True),
+            patch("seedshield.ui_manager.curses.halfdelay", mock_halfdelay),
         ):
             ui = UIManager()
             ui.initialize(mock_stdscr=mock_stdscr)
@@ -69,8 +70,9 @@ class TestUIManager:
         mock_stdscr.timeout = MagicMock()
         mock_halfdelay = MagicMock()
 
-        with patch("sys.stdin.isatty", return_value=False), patch(
-            "seedshield.ui_manager.curses.halfdelay", mock_halfdelay
+        with (
+            patch("sys.stdin.isatty", return_value=False),
+            patch("seedshield.ui_manager.curses.halfdelay", mock_halfdelay),
         ):
             ui = UIManager()
             ui.initialize(mock_stdscr=mock_stdscr)
@@ -270,11 +272,12 @@ class TestUIManager:
 
         ui = UIManager()
 
-        with patch("seedshield.ui_manager.curses", mock_curses), patch(
-            "seedshield.ui_manager.logger"
-        ) as mock_logger, patch.object(ui, "initialize") as mock_initialize, patch.object(
-            ui, "cleanup"
-        ) as mock_cleanup:
+        with (
+            patch("seedshield.ui_manager.curses", mock_curses),
+            patch("seedshield.ui_manager.logger") as mock_logger,
+            patch.object(ui, "initialize") as mock_initialize,
+            patch.object(ui, "cleanup") as mock_cleanup,
+        ):
 
             with pytest.raises(Exception, match="Context error"):
                 ui.with_ui_context(callback)
