@@ -9,62 +9,68 @@ def test_input_handler_init():
     assert handler.word_count == 10
 
 
-@patch("pyperclip.copy")
-def test_clear_clipboard(mock_copy):
-    """Test clipboard clearing."""
+def test_validate_number_input_multiple():
+    """Multiple positions separated by spaces and/or commas are accepted."""
     handler = InputHandler(10)
-    handler._clear_clipboard()
-    mock_copy.assert_called_once_with("")
+    assert handler.validate_number_input("5 7 9") == [5, 7, 9]
+    assert handler.validate_number_input("5,7,9") == [5, 7, 9]
+    assert handler.validate_number_input("5, 7  9") == [5, 7, 9]
+
+
+def test_validate_number_input_multiple_rejects_any_invalid():
+    """One bad value rejects the whole entry; nothing is partially accepted."""
+    handler = InputHandler(10)
+    assert handler.validate_number_input("5 invalid 9") is None
+    assert handler.validate_number_input("5 11") is None
+    assert handler.validate_number_input("0 5") is None
 
 
 @patch("pyperclip.paste")
 @patch("pyperclip.copy")
-def test_process_clipboard_valid_input(mock_copy, mock_paste, mock_stdscr):
+def test_process_clipboard_valid_input(mock_copy, mock_paste):
     """Test processing valid clipboard input."""
     handler = InputHandler(10)
     mock_paste.return_value = "1\n3\n5"
 
-    result = handler.process_clipboard_input(mock_stdscr)
+    result = handler.process_clipboard_input()
     assert result == [1, 3, 5]
     mock_copy.assert_called_with("")
 
 
 @patch("pyperclip.paste")
 @patch("pyperclip.copy")
-def test_process_clipboard_invalid_input(mock_copy, mock_paste, mock_stdscr):
+def test_process_clipboard_invalid_input(mock_copy, mock_paste):
     """Test processing invalid clipboard input."""
     handler = InputHandler(10)
     mock_paste.return_value = "invalid\n3\ntext\n5"
 
-    result = handler.process_clipboard_input(mock_stdscr)
+    result = handler.process_clipboard_input()
     assert result == [3, 5]
     mock_copy.assert_called_with("")
 
 
 @patch("pyperclip.paste")
 @patch("seedshield.secure_memory.secure_clipboard_clear")
-def test_process_clipboard_with_pyperclip_exception(mock_clear, mock_paste, mock_stdscr):
+def test_process_clipboard_with_pyperclip_exception(mock_clear, mock_paste):
     """Test error handling when pyperclip raises an exception."""
     handler = InputHandler(10)
     mock_paste.side_effect = pyperclip.PyperclipException("Clipboard access error")
     mock_clear.return_value = True
 
-    result = handler.process_clipboard_input(mock_stdscr)
+    result = handler.process_clipboard_input()
     assert result is None
-    mock_stdscr.addstr.assert_called_with(6, 0, "Error processing clipboard data")
 
 
 @patch("pyperclip.paste")
 @patch("seedshield.secure_memory.secure_clipboard_clear")
-def test_process_clipboard_with_general_exception(mock_clear, mock_paste, mock_stdscr):
+def test_process_clipboard_with_general_exception(mock_clear, mock_paste):
     """Test error handling when an unexpected exception occurs."""
     handler = InputHandler(10)
     mock_paste.side_effect = Exception("Unexpected error")
     mock_clear.return_value = True
 
-    result = handler.process_clipboard_input(mock_stdscr)
+    result = handler.process_clipboard_input()
     assert result is None
-    mock_stdscr.addstr.assert_called_with(6, 0, "Unexpected error with clipboard")
 
 
 def test_validate_number_input():
@@ -214,7 +220,7 @@ def test_get_input_clipboard_numbers(mock_process_clipboard, mock_noecho, mock_e
 
     result = handler.get_input(mock_stdscr)
     assert result == [1, 3, 5]
-    mock_process_clipboard.assert_called_once_with(mock_stdscr)
+    mock_process_clipboard.assert_called_once_with()
 
 
 @patch("curses.echo")
@@ -256,3 +262,37 @@ def test_get_input_general_exception(mock_noecho, mock_echo, mock_stdscr):
     result = handler.get_input(mock_stdscr)
     mock_stdscr.addstr.assert_any_call(6, 0, "Error processing input")
     assert result is None
+
+
+@patch("curses.echo")
+@patch("curses.noecho")
+def test_get_input_multiple_numbers(mock_noecho, mock_echo, mock_stdscr):
+    """Typing several positions at once returns them all."""
+    handler = InputHandler(10)
+    mock_stdscr.getstr.return_value = b"3 6 9"
+
+    result = handler.get_input(mock_stdscr)
+    assert result == [3, 6, 9]
+
+
+@patch("curses.echo")
+@patch("curses.noecho")
+def test_get_input_blocks_while_typing(mock_noecho, mock_echo, mock_stdscr):
+    """Input mode must use blocking reads so slow typing is never aborted."""
+    handler = InputHandler(10)
+    mock_stdscr.getstr.return_value = b"q"
+
+    handler.get_input(mock_stdscr)
+    mock_stdscr.timeout.assert_called_once_with(-1)
+
+
+@patch("curses.echo")
+@patch("curses.noecho")
+def test_get_input_shows_feedback_on_next_prompt(mock_noecho, mock_echo, mock_stdscr):
+    """Invalid input feedback persists on the redrawn prompt (no UI freeze)."""
+    handler = InputHandler(10)
+    mock_stdscr.getstr.side_effect = [b"99", b"q"]
+
+    result = handler.get_input(mock_stdscr)
+    assert result is None
+    mock_stdscr.addstr.assert_any_call(6, 0, "Invalid input. Enter numbers between 1-10")

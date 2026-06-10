@@ -6,13 +6,13 @@ including keyboard, clipboard, and files.
 """
 
 import curses
-import time
 import os
-from typing import List, Optional, Any
+import re
+from typing import List, Optional, Tuple
 
 import pyperclip  # type: ignore
 
-from .config import logger
+from .config import logger, INPUT_PROMPT_ROW, INPUT_MESSAGE_ROW
 from .secure_memory import secure_clipboard_clear
 
 
@@ -21,51 +21,43 @@ class InputHandler:
     Handles user input processing and validation for the secure word interface.
     """
 
-    def __init__(self, word_count: int, ui_manager: Any = None) -> None:
+    def __init__(self, word_count: int) -> None:
         """
         Initialize the input handler.
 
         Args:
             word_count: Total number of available words
-            ui_manager: UI manager instance for rendering
         """
         self.word_count = word_count
-        self.ui_manager = ui_manager
 
-    def display_input_prompt(self, stdscr: Any) -> None:
+    def display_input_prompt(self, stdscr: "curses.window", message: Optional[str] = None) -> None:
         """
-        Display input instructions to the user.
+        Display input instructions and an optional feedback message.
 
         Args:
             stdscr: Curses window object for terminal display
+            message: Optional feedback from the previous input attempt
         """
         stdscr.clear()
-        stdscr.addstr(0, 0, f"Enter position (1-{self.word_count}) or:")
+        stdscr.addstr(0, 0, f"Enter position(s) (1-{self.word_count}), e.g. 5 12 19, or:")
         stdscr.addstr(1, 0, "- Type 'v' to paste numbers from clipboard")
         stdscr.addstr(2, 0, "- Type 'q' to quit")
         stdscr.addstr(3, 0, "Press Enter after your input")
-        stdscr.addstr(5, 0, "> ")
+        if message:
+            stdscr.addstr(INPUT_MESSAGE_ROW, 0, message)
+        # Drawn last so the cursor lands right after the prompt
+        stdscr.addstr(INPUT_PROMPT_ROW, 0, "> ")
         stdscr.refresh()
 
-    # For backward compatibility with tests
-    def _clear_clipboard(self) -> None:
-        """
-        Safely clear clipboard contents.
-
-        Attempts to clear the clipboard by setting it to an empty string.
-        Fails silently if clipboard access is not available.
-        """
-        secure_clipboard_clear()
-
-    def process_clipboard_input(self, stdscr: Any) -> Optional[List[int]]:
+    def process_clipboard_input(self) -> Optional[List[int]]:
         """
         Process and validate input from the clipboard.
 
-        Args:
-            stdscr: Curses window object for terminal display
+        The clipboard is securely cleared immediately after reading.
 
         Returns:
-            Optional[List[int]]: List of valid position numbers, or None if no valid numbers found
+            Optional[List[int]]: List of valid position numbers, or None if
+                no valid numbers were found
         """
         try:
             content = pyperclip.paste()
@@ -84,52 +76,50 @@ class InputHandler:
             if not secure_clipboard_clear():
                 logger.warning("Failed to securely clear clipboard")
 
-            # Provide feedback based on processing results
-            if numbers:
-                stdscr.addstr(6, 0, f"Found {len(numbers)} valid numbers")
-                stdscr.refresh()
-                time.sleep(1)
-                return numbers
-
-            stdscr.addstr(6, 0, "No valid numbers found in clipboard")
-            stdscr.refresh()
-            time.sleep(1)
-            return None
+            return numbers or None
 
         except (pyperclip.PyperclipException, ValueError) as e:
             logger.error("Error processing clipboard: %s", str(e))
-            stdscr.addstr(6, 0, "Error processing clipboard data")
-            stdscr.refresh()
-            time.sleep(1)
             return None
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Unexpected clipboard error: %s", str(e))
-            stdscr.addstr(6, 0, "Unexpected error with clipboard")
-            stdscr.refresh()
-            time.sleep(1)
             return None
 
     def validate_number_input(self, input_str: str) -> Optional[List[int]]:
         """
-        Validate single number input from the user.
+        Validate number input from the user.
+
+        Accepts one or more positions separated by spaces and/or commas
+        (e.g. "5", "5 12 19", "5,12,19"). All values must be valid for
+        the input to be accepted.
 
         Args:
             input_str: String containing the user's input
 
         Returns:
-            Optional[List[int]]: Single-element list with valid position number,
-                               or None if input is invalid
+            Optional[List[int]]: List of valid position numbers,
+                               or None if any value is invalid
         """
-        try:
-            num = int(input_str)
-            if 1 <= num <= self.word_count:
-                return [num]
+        tokens = [token for token in re.split(r"[,\s]+", input_str.strip()) if token]
+        if not tokens:
+            return None
 
-            # Never log the entered value: positions encode the seed
-            logger.debug("Input number out of valid range (1-%s)", self.word_count)
-        except ValueError:
-            logger.debug("Invalid non-integer input")
-        return None
+        positions = []
+        for token in tokens:
+            # Never log the entered values: positions encode the seed
+            try:
+                num = int(token)
+            except ValueError:
+                logger.debug("Invalid non-integer input")
+                return None
+
+            if not 1 <= num <= self.word_count:
+                logger.debug("Input number out of valid range (1-%s)", self.word_count)
+                return None
+
+            positions.append(num)
+
+        return positions
 
     @staticmethod
     def _validate_readable_file(file_path: str) -> bool:
@@ -204,53 +194,42 @@ class InputHandler:
             logger.error("Unexpected error reading positions file: %s", str(e))
             return None
 
-    def _display_error(self, stdscr: Any, message: str, error: Optional[Exception] = None) -> None:
+    def _process_input_command(self, input_str: str) -> Tuple[Optional[List[int]], Optional[str]]:
         """
-        Display an error message on the screen.
+        Process a single input command.
 
         Args:
-            stdscr: Curses window object
-            message: Error message to display
-            error: Optional exception to log
-        """
-        if error:
-            logger.error("%s: %s", message, str(error))
-        stdscr.addstr(6, 0, message)
-        stdscr.refresh()
-        time.sleep(1)
-
-    def _process_input_command(self, stdscr: Any, input_str: str) -> Optional[List[int]]:
-        """
-        Process a specific input command.
-
-        Args:
-            stdscr: Curses window object
             input_str: User input string
 
         Returns:
-            Optional[List[int]]: Processed positions or None
+            Tuple[Optional[List[int]], Optional[str]]: Positions (None means
+                quit, an empty list means retry) and an optional feedback
+                message for the next prompt
         """
         # Handle quitting
         if input_str == "q":
-            return None
+            return None, None
 
         # Handle clipboard input
         if input_str == "v":
-            return self.process_clipboard_input(stdscr)
+            numbers = self.process_clipboard_input()
+            if numbers:
+                return numbers, None
+            return [], "No valid numbers found in clipboard"
 
-        # Handle individual number
+        # Handle one or more numbers
         validated_input = self.validate_number_input(input_str)
         if validated_input:
-            return validated_input
+            return validated_input, None
 
-        # Invalid input
-        err_msg = f"Invalid input. Please enter a number between 1-{self.word_count}"
-        self._display_error(stdscr, err_msg)
-        return []  # Empty list indicates continuing input loop
+        return [], f"Invalid input. Enter numbers between 1-{self.word_count}"
 
-    def get_input(self, stdscr: Any) -> Optional[List[int]]:
+    def get_input(self, stdscr: "curses.window") -> Optional[List[int]]:
         """
         Get user input, validating it and handling different input types.
+
+        Feedback messages stay visible on the redrawn prompt instead of
+        blocking the UI; input is fully blocking while the user types.
 
         Args:
             stdscr: Curses window object for terminal display
@@ -258,31 +237,37 @@ class InputHandler:
         Returns:
             Optional[List[int]]: List of valid position numbers or None for quit command
         """
-        while True:
-            # Clear any previous error messages
-            stdscr.move(6, 0)
-            stdscr.clrtoeol()
-            self.display_input_prompt(stdscr)
-            curses.echo()
+        # Block while the user types; the display loop restores its own timeout
+        stdscr.timeout(-1)
+        message: Optional[str] = None
 
+        while True:
             try:
-                input_str = stdscr.getstr().decode("utf-8").strip().lower()
+                self.display_input_prompt(stdscr, message)
+                message = None
+                curses.echo()
+                try:
+                    input_str = stdscr.getstr().decode("utf-8").strip().lower()
+                finally:
+                    curses.noecho()
+
                 # Skip empty input
                 if not input_str:
                     continue
 
-                result = self._process_input_command(stdscr, input_str)
-                # None means quit, empty list means continue, otherwise return the result
+                result, message = self._process_input_command(input_str)
+                # None means quit, empty list means retry with feedback shown
                 if result is None:
                     return None
-                if result:  # Non-empty list
+                if result:
                     return result
 
             except UnicodeDecodeError as e:
-                self._display_error(stdscr, "Invalid character input", e)
+                logger.error("Invalid character input: %s", str(e))
+                message = "Invalid character input"
             except ValueError as e:
-                self._display_error(stdscr, "Invalid input format", e)
+                logger.error("Invalid input format: %s", str(e))
+                message = "Invalid input format"
             except Exception as e:  # pylint: disable=broad-exception-caught
-                self._display_error(stdscr, "Error processing input", e)
-            finally:
-                curses.noecho()
+                logger.error("Error processing input: %s", str(e))
+                message = "Error processing input"

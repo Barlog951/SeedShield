@@ -62,6 +62,9 @@ def mock_curses():
 def mock_stdscr():
     mock = MagicMock()
     mock.getmaxyx.return_value = (24, 80)
+    # Real bytes so input mode parses deterministically instead of relying
+    # on MagicMock coercion quirks
+    mock.getstr.return_value = b"1"
     return mock
 
 

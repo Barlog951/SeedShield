@@ -7,11 +7,11 @@ ensuring proper masking and interaction.
 
 import curses
 from dataclasses import dataclass
-from typing import List, Optional, Any
+from typing import List, Optional
 
 from .config import logger, MASK_CHARACTER, MASK_LENGTH
 from .config import SCROLL_INDICATOR_UP, SCROLL_INDICATOR_DOWN, MENU_TEXT
-from .state_handler import StateHandler
+from .config import ROW_SPACING, RESERVED_BOTTOM_ROWS, MENU_OFFSET
 
 
 @dataclass(frozen=True)
@@ -54,18 +54,15 @@ class DisplayHandler:
     - Handling terminal size changes
     """
 
-    def __init__(self, words: List[str], ui_manager: Any = None) -> None:
+    def __init__(self, words: List[str]) -> None:
         """
         Initialize the display handler.
 
         Args:
             words: List of words to manage for display
-            ui_manager: Optional UI manager for abstracted rendering
         """
         self.words = words
-        self.ui_manager = ui_manager
         self.mask = MASK_CHARACTER * MASK_LENGTH
-        self.state_handler: Optional[StateHandler] = None  # Will be set later
 
         # Store the last state to optimize rendering
         self._last_height = 0
@@ -73,7 +70,9 @@ class DisplayHandler:
 
         logger.debug("DisplayHandler initialized with %s words", len(words))
 
-    def _add_scroll_indicators(self, stdscr: Any, viewport: Viewport, total: int) -> None:
+    def _add_scroll_indicators(
+        self, stdscr: "curses.window", viewport: Viewport, total: int
+    ) -> None:
         """
         Add scroll indicators to the display if needed.
 
@@ -99,19 +98,19 @@ class DisplayHandler:
         if viewport.end < total:
             try:
                 stdscr.addstr(
-                    viewport.height - 7,
+                    viewport.height - RESERVED_BOTTOM_ROWS,
                     max(0, viewport.width - len(SCROLL_INDICATOR_DOWN) - 1),
                     SCROLL_INDICATOR_DOWN,
                 )
                 logger.debug(
                     "Added down scroll indicator at position %s,%s",
-                    viewport.height - 7,
+                    viewport.height - RESERVED_BOTTOM_ROWS,
                     viewport.width - len(SCROLL_INDICATOR_DOWN) - 1,
                 )
             except curses.error:
                 pass
 
-    def _add_menu(self, stdscr: Any, height: int, is_last_reached: bool) -> None:
+    def _add_menu(self, stdscr: "curses.window", height: int, is_last_reached: bool) -> None:
         """
         Add command menu to the display.
 
@@ -120,7 +119,7 @@ class DisplayHandler:
             height: Terminal heigh
             is_last_reached: Whether the last word has been reached
         """
-        menu_y = height - 5
+        menu_y = height - MENU_OFFSET
 
         try:
             # Display appropriate command menu based on state
@@ -162,7 +161,7 @@ class DisplayHandler:
             except curses.error:
                 pass
 
-    def _render_word(self, stdscr: Any, row: WordRow, width: int) -> None:
+    def _render_word(self, stdscr: "curses.window", row: WordRow, width: int) -> None:
         """
         Render a single word with proper masking and formatting.
 
@@ -200,7 +199,9 @@ class DisplayHandler:
         logger.warning("Invalid word position requested")
         return f"INVALID({pos})"
 
-    def display_words(self, stdscr: Any, positions: List[int], state: DisplayState) -> int:
+    def display_words(
+        self, stdscr: "curses.window", positions: List[int], state: DisplayState
+    ) -> int:
         """
         Display words with masking in the terminal interface.
 
@@ -218,12 +219,12 @@ class DisplayHandler:
         self._last_width = width
 
         # Calculate display metrics
-        max_display_lines = max(1, height - 7)  # Reserve space for menu and indicators
+        max_display_lines = max(1, height - RESERVED_BOTTOM_ROWS)
         viewport = Viewport(
             height=height,
             width=width,
             start=state.scroll,
-            end=min(len(positions), state.scroll + max_display_lines // 2),
+            end=min(len(positions), state.scroll + max_display_lines // ROW_SPACING),
         )
 
         logger.debug("Displaying words %s-%s of %s", viewport.start, viewport.end, len(positions))
@@ -245,7 +246,11 @@ class DisplayHandler:
         return result
 
     def _display_visible_words(
-        self, stdscr: Any, positions: List[int], viewport: Viewport, cursor_pos: Optional[int]
+        self,
+        stdscr: "curses.window",
+        positions: List[int],
+        viewport: Viewport,
+        cursor_pos: Optional[int],
     ) -> None:
         """
         Display the visible words on the screen.
@@ -262,10 +267,10 @@ class DisplayHandler:
                 word = self._get_word_for_position(pos)
 
                 # Calculate position and check if it's visible
-                y_pos = i * 2 - viewport.start * 2
+                y_pos = i * ROW_SPACING - viewport.start * ROW_SPACING
 
                 # Only render if within displayable area
-                if 0 <= y_pos < viewport.height - 6:
+                if 0 <= y_pos < viewport.height - RESERVED_BOTTOM_ROWS + 1:
                     row = WordRow(
                         word=word, display_num=i + 1, y_pos=y_pos, revealed=cursor_pos == i
                     )
@@ -289,7 +294,7 @@ class DisplayHandler:
             int: Maximum number of words that can be displayed
         """
         # Ensure at least one word is visible
-        return max(1, (height - 7) // 2)
+        return max(1, (height - RESERVED_BOTTOM_ROWS) // ROW_SPACING)
 
     def handle_autoscroll(self, current_pos: Optional[int], scroll_pos: int, height: int) -> int:
         """

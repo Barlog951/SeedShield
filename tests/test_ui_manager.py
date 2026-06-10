@@ -2,7 +2,7 @@
 Unit tests for the UIManager class.
 
 This module provides comprehensive tests for the UIManager class methods
-to ensure proper terminal UI operations and error handling.
+to ensure proper terminal lifecycle handling and error recovery.
 """
 
 import pytest
@@ -21,9 +21,6 @@ class TestUIManager:
 
         ui = UIManager()
         ui.initialize(mock_stdscr=mock_stdscr)
-
-        # Call update_dimensions manually since it's not called when using mock_stdscr
-        ui.update_dimensions()
 
         assert ui.stdscr == mock_stdscr
         assert ui.height == 24
@@ -82,6 +79,31 @@ class TestUIManager:
             assert mock_stdscr.timeout.call_args == call(100)
             assert not mock_halfdelay.called
 
+    def test_initialization_sets_locale(self, mock_stdscr):
+        """The locale must be configured before initscr for UTF-8 rendering."""
+        mock_stdscr.getmaxyx.return_value = (24, 80)
+        manager = MagicMock()
+
+        with (
+            patch("seedshield.ui_manager.locale.setlocale") as mock_setlocale,
+            patch("seedshield.ui_manager.curses.initscr", return_value=mock_stdscr) as mock_init,
+            patch("seedshield.ui_manager.curses.mousemask"),
+            patch("seedshield.ui_manager.curses.noecho"),
+            patch("seedshield.ui_manager.curses.cbreak"),
+            patch("seedshield.ui_manager.curses.halfdelay"),
+            patch("sys.stdin.isatty", return_value=True),
+        ):
+            manager.attach_mock(mock_setlocale, "setlocale")
+            manager.attach_mock(mock_init, "initscr")
+
+            ui = UIManager()
+            ui.initialize()
+
+            assert mock_setlocale.called
+            # setlocale must run before initscr
+            names = [c[0] for c in manager.mock_calls]
+            assert names.index("setlocale") < names.index("initscr")
+
     def test_initialization_error(self):
         """Test error handling during initialization."""
         # Create a mock screen that raises an exception when keypad is called
@@ -124,6 +146,35 @@ class TestUIManager:
             assert mock_curses.echo.called
             assert mock_curses.endwin.called
 
+    def test_cleanup_wipes_screen_first(self, mock_curses, mock_stdscr):
+        """Revealed words must not survive in scrollback after exit."""
+        with patch("seedshield.ui_manager.curses", mock_curses):
+            ui = UIManager()
+            ui.initialize(mock_stdscr=mock_stdscr)
+
+            manager = MagicMock()
+            manager.attach_mock(mock_stdscr.erase, "erase")
+            manager.attach_mock(mock_curses.endwin, "endwin")
+
+            ui.cleanup()
+
+            assert mock_stdscr.erase.called
+            names = [c[0] for c in manager.mock_calls]
+            assert names.index("erase") < names.index("endwin")
+
+    def test_cleanup_is_idempotent(self, mock_curses, mock_stdscr):
+        """A second cleanup must be a no-op instead of re-touching curses."""
+        with patch("seedshield.ui_manager.curses", mock_curses):
+            ui = UIManager()
+            ui.initialize(mock_stdscr=mock_stdscr)
+
+            ui.cleanup()
+            assert ui.stdscr is None
+
+            mock_curses.endwin.reset_mock()
+            ui.cleanup()
+            assert not mock_curses.endwin.called
+
     def test_cleanup_error(self, mock_curses):
         """Test error handling during cleanup."""
         mock_stdscr = MagicMock()
@@ -137,64 +188,6 @@ class TestUIManager:
             # Verify error was logged
             assert mock_logger.error.called
 
-    def test_get_input(self, mock_curses, mock_stdscr):
-        """Test getting input from user."""
-        mock_stdscr.getch.return_value = 65  # 'A' character
-
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        # Test normal input
-        result = ui.get_input()
-        assert result == 65
-        assert not mock_curses.echo.called
-
-        # Test with echo
-        result = ui.get_input(echo=True)
-        assert result == 65
-        assert mock_curses.echo.called
-        assert mock_curses.noecho.called
-
-    def test_get_input_error(self, mock_curses, mock_stdscr):
-        """Test handling curses error during input."""
-        mock_stdscr.getch.side_effect = mock_curses.error
-
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        result = ui.get_input()
-        assert result == -1
-
-    def test_get_string(self, mock_curses, mock_stdscr):
-        """Test getting string input."""
-        mock_stdscr.getstr.return_value = b"test input"
-
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        with patch("seedshield.ui_manager.curses", mock_curses):
-            result = ui.get_string(10, 5, "Enter: ")
-
-            # Verify prompt was displayed
-            mock_stdscr.addstr.assert_called_with(10, 5, "Enter: ")
-            assert mock_curses.echo.called
-            assert mock_curses.noecho.called
-            assert result == "test input"
-
-    def test_get_string_error(self, mock_curses, mock_stdscr):
-        """Test error handling when getting string input."""
-        mock_stdscr.getstr.side_effect = Exception("Input error")
-
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        with patch("seedshield.ui_manager.curses", mock_curses):
-            result = ui.get_string(10, 5)
-
-            assert result == ""
-            assert mock_curses.echo.called
-            assert mock_curses.noecho.called
-
     def test_update_dimensions(self, mock_stdscr):
         """Test updating dimensions."""
         ui = UIManager()
@@ -206,49 +199,6 @@ class TestUIManager:
         assert width == 80
         assert ui.height == 24
         assert ui.width == 80
-
-    def test_clear_and_refresh(self, mock_stdscr):
-        """Test screen clearing and refreshing."""
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        ui.clear()
-        assert mock_stdscr.clear.called
-
-        ui.refresh()
-        assert mock_stdscr.refresh.called
-
-    def test_add_text(self, mock_curses, mock_stdscr):
-        """Test adding text to the screen."""
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        # Test normal text
-        ui.add_text(10, 5, "Test text")
-        mock_stdscr.addstr.assert_called_with(10, 5, "Test text")
-
-        # Test highlighted text
-        ui.add_text(11, 5, "Highlighted", highlight=True)
-        mock_stdscr.addstr.assert_called_with(11, 5, "Highlighted", mock_curses.A_REVERSE)
-
-    def test_add_text_error(self, mock_curses, mock_stdscr):
-        """Test error handling when adding text."""
-        mock_stdscr.addstr.side_effect = mock_curses.error
-
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        # Should not raise an exception
-        ui.add_text(10, 5, "Test text")
-
-    def test_get_mouse_event(self, mock_curses, mock_stdscr):
-        """Test getting mouse events."""
-        ui = UIManager()
-        ui.initialize(mock_stdscr=mock_stdscr)
-
-        with patch("seedshield.ui_manager.curses", mock_curses):
-            result = ui.get_mouse_event()
-            assert result == (0, 10, 5, 0, 0)
 
     def test_with_ui_context(self, mock_curses, mock_stdscr):
         """Test running a function within UI context."""

@@ -33,8 +33,15 @@ SCROLL_INDICATOR_DOWN = "↓ More ↓"
 MENU_TEXT = {
     "standard": "'n' - new input, 's' - show one by one, 'q' - quit, ↑↓ - scroll",
     "with_reset": "'n' - input, 's' - show one by one, 'r' - reset, 'q' - quit, ↑↓ - scroll",
-    "mouse_help": "Mouse over to reveal word",
+    "mouse_help": "Mouse: hover or click a word to reveal",
 }
+
+# Terminal layout (rows)
+ROW_SPACING = 2  # each word occupies this many rows
+RESERVED_BOTTOM_ROWS = 7  # rows kept free for the menu and scroll indicators
+MENU_OFFSET = 5  # menu starts this many rows above the bottom
+INPUT_PROMPT_ROW = 5  # row of the "> " prompt on the input screen
+INPUT_MESSAGE_ROW = 6  # row used for input-screen feedback messages
 
 
 def setup_logging(

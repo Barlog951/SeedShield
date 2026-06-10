@@ -88,7 +88,8 @@ def test_timeout_adjustment_on_new_input(mock_curses, mock_stdscr):
     with patch("curses.initscr", return_value=mock_stdscr):
         interface.run()
 
-    assert any(call.args[0] == 10000 for call in mock_stdscr.timeout.call_args_list)
+    # Input mode must switch to blocking reads
+    assert any(call.args[0] == -1 for call in mock_stdscr.timeout.call_args_list)
 
 
 @mark.timeout(5)
@@ -97,10 +98,10 @@ def test_input_handling_with_timeout(mock_curses, mock_stdscr):
     interface = SecureWordInterface()
     mock_stdscr.getch.side_effect = [-1, ord("q")]
 
-    with patch("curses.initscr", return_value=mock_stdscr), patch("time.sleep") as mock_sleep:
+    with patch("curses.initscr", return_value=mock_stdscr):
         interface.run()
 
-    mock_sleep.assert_called()
+    assert mock_stdscr.getch.call_count >= 2
 
 
 @mark.timeout(5)
@@ -166,8 +167,8 @@ def test_input_mode_transitions(mock_curses, mock_stdscr):
 
     # Verify timeout changes
     timeout_calls = [call.args[0] for call in mock_stdscr.timeout.call_args_list]
-    assert 10000 in timeout_calls  # Should see input mode timeout
-    assert 100 in timeout_calls  # Should see normal mode timeout
+    assert -1 in timeout_calls  # Input mode switches to blocking reads
+    assert 100 in timeout_calls  # Display loop restores its polling timeout
 
 
 @mark.timeout(5)
@@ -349,13 +350,11 @@ def test_process_user_input_error(mock_curses):
     positions = [1, 2, 3]
     mock_stdscr.getch.side_effect = curses.error
 
-    with patch("time.sleep") as mock_sleep:
-        result, scroll_pos = interface._process_user_input(
-            mock_stdscr, positions, ViewContext(0, 3, time.time())
-        )
-        assert result is True
-        assert scroll_pos == 0
-        mock_sleep.assert_called_once_with(0.05)  # Updated to match actual implementation
+    result, scroll_pos = interface._process_user_input(
+        mock_stdscr, positions, ViewContext(0, 3, time.time())
+    )
+    assert result is True
+    assert scroll_pos == 0
 
 
 @mark.timeout(5)
@@ -409,13 +408,11 @@ def test_process_user_input_curses_error(mock_curses):
     positions = [1, 2, 3]
     mock_stdscr.getch.side_effect = curses.error
 
-    with patch("time.sleep") as mock_sleep:
-        result, scroll_pos = interface._process_user_input(
-            mock_stdscr, positions, ViewContext(0, 3, time.time())
-        )
-        assert result is True
-        assert scroll_pos == 0
-        mock_sleep.assert_called_once_with(0.05)  # Updated to match actual implementation
+    result, scroll_pos = interface._process_user_input(
+        mock_stdscr, positions, ViewContext(0, 3, time.time())
+    )
+    assert result is True
+    assert scroll_pos == 0
 
 
 @mark.timeout(5)

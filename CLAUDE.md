@@ -52,12 +52,14 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - **InputHandler**: Manages user input and position validation
   - **DisplayHandler**: Handles UI rendering and word masking/revealing
   - **StateHandler**: Manages application state and security timeouts
-  - **UIManager**: Abstracts terminal UI operations for better testability
+  - **UIManager**: Owns the curses terminal lifecycle (init/cleanup/context)
   - **SecureMemory**: Handles secure memory operations
 - **User Interface**:
   - Clean, minimalist design with no distractions
   - Proper handling of terminal resizing
   - Detailed command menu with context-sensitive options
+  - Multi-position input: "5 12 19" or "5,12,19" accepted directly
+  - Input feedback persists on the prompt instead of freezing the UI
   - Improved error handling for user inputs
   - Proper screen transitions between modes
 - **Security Features**: 
@@ -66,20 +68,21 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - User-entered values and positions are never written to logs
   - Mask/reveal functionality with secure timers
   - Secure memory handling and clipboard management
+  - Screen wiped before terminal restore (nothing left in scrollback)
   - Input validation and sanitization
 - **Testing Framework**:
   - Global fixtures in conftest.py for all tests
   - Comprehensive mocking of curses functionality
   - Isolated test environment with pytest
-  - 128 tests covering all components
-  - 92% code coverage, exceeding 85% threshold
+  - 127 tests covering all components
+  - 93% code coverage, exceeding 85% threshold
 - **Cognitive Complexity**: Maintained ≤15 per component through clean architecture
 - **CI/CD Pipeline**: GitHub Actions for automated testing, building and publishing
 - **Docker Support**: Minimal secure image with optimized layers
 
 ## Current Project Status
-- All tests are passing (128 tests)
-- Code coverage at 92%, exceeding required threshold of 85%
+- All tests are passing (127 tests)
+- Code coverage at 93%, exceeding required threshold of 85%
 - Pylint score: 10.00/10
 - No type checking issues (mypy passes)
 - No functions with complexity over 15

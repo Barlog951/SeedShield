@@ -8,14 +8,14 @@ with masking, timed reveals, and memory safety features.
 import time
 import curses
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Tuple
 
 from .input_handler import InputHandler
 from .display_handler import DisplayHandler, DisplayState
 from .state_handler import StateHandler
 from .ui_manager import UIManager
 from .secure_memory import secure_clear_list
-from .config import logger, DEFAULT_WORDLIST_FULLPATH
+from .config import logger, DEFAULT_WORDLIST_FULLPATH, ROW_SPACING
 
 
 @dataclass(frozen=True)
@@ -53,11 +53,9 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         self._load_wordlist(wordlist_path)
 
         # Initialize handlers
-        self.input_handler = InputHandler(len(self.words), self.ui_manager)
-        self.display_handler = DisplayHandler(self.words, self.ui_manager)
+        self.input_handler = InputHandler(len(self.words))
+        self.display_handler = DisplayHandler(self.words)
         self.state_handler = StateHandler()
-        # Set state_handler reference in display_handler
-        self.display_handler.state_handler = self.state_handler
 
         logger.debug("SecureWordInterface initialized")
 
@@ -93,7 +91,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             logger.error("Unexpected error loading wordlist: %s", str(e))
             raise
 
-    def _handle_input_mode(self, stdscr: Any) -> Optional[List[int]]:
+    def _handle_input_mode(self, stdscr: "curses.window") -> Optional[List[int]]:
         """
         Handle the input mode for entering word positions.
 
@@ -116,7 +114,11 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         return new_positions
 
     def _update_display_state(
-        self, stdscr: Any, positions: List[int], scroll_position: int, current_time: float
+        self,
+        stdscr: "curses.window",
+        positions: List[int],
+        scroll_position: int,
+        current_time: float,
     ) -> Tuple[int, int]:
         """
         Update the display based on current state.
@@ -159,7 +161,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         return visible_count, scroll_position
 
     def _process_user_input(
-        self, stdscr: Any, positions: List[int], view: ViewContext
+        self, stdscr: "curses.window", positions: List[int], view: ViewContext
     ) -> Tuple[bool, int]:
         """
         Process user input and update state accordingly.
@@ -183,9 +185,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
                     c, positions, view
                 )
 
-                # Handle timeout adjustment for input mode
                 if should_reinit:
-                    stdscr.timeout(10000)
                     # Clear positions to force entering input mode on next loop
                     positions.clear()
 
@@ -209,8 +209,6 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             # Ignore curses errors (like terminal resize)
             pass
 
-        # Small sleep to avoid CPU spinning
-        time.sleep(0.05)
         return True, scroll_position
 
     def _handle_quit_command(self) -> Tuple[bool, bool, int, List[int]]:
@@ -276,7 +274,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         try:
             mouse_event = curses.getmouse()
             _, _, my, _, _ = mouse_event
-            visible_index = my // 2 + view.scroll
+            visible_index = my // ROW_SPACING + view.scroll
 
             if 0 <= visible_index < len(positions):
                 logger.debug("Mouse reveal at index %s", visible_index)
@@ -353,7 +351,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             logger.error("Unexpected error loading positions file: %s", str(e))
             raise ValueError(f"Error processing positions file: {str(e)}") from e
 
-    def _main_display_loop(self, stdscr: Any, positions: List[int]) -> None:
+    def _main_display_loop(self, stdscr: "curses.window", positions: List[int]) -> None:
         """
         Run the main display loop for showing words and handling interaction.
 
