@@ -1,7 +1,5 @@
 import pytest
-from unittest.mock import patch
 from seedshield.display_handler import DisplayHandler
-from tests.test_fixtures import mock_stdscr
 
 
 def test_display_handler_init():

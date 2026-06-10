@@ -13,13 +13,14 @@ from .config import logger, REVEAL_TIMEOUT
 
 class UserCommand(Enum):
     """Enumeration of recognized user commands."""
-    QUIT = 'q'
-    NEW_INPUT = 'n'
-    SEQUENTIAL_REVEAL = 's'
-    RESET = 'r'
-    UP = 'KEY_UP'
-    DOWN = 'KEY_DOWN'
-    MOUSE = 'MOUSE'
+
+    QUIT = "q"
+    NEW_INPUT = "n"
+    SEQUENTIAL_REVEAL = "s"
+    RESET = "r"
+    UP = "KEY_UP"
+    DOWN = "KEY_DOWN"
+    MOUSE = "MOUSE"
 
 
 class StateHandler:
@@ -71,8 +72,9 @@ class StateHandler:
             self.cursor_pos = None
             self.reveal_time = None
 
-    def handle_navigation(self, key: int, positions: List[int], scroll_position: int,
-                          visible_count: int) -> int:
+    def handle_navigation(
+        self, key: int, positions: List[int], scroll_position: int, visible_count: int
+    ) -> int:
         """
         Handle navigation (scrolling) input.
 
@@ -139,7 +141,7 @@ class StateHandler:
             self.current_index = 0
 
     def handle_commands(
-            self, key: int, positions: List[int], current_time: float
+        self, key: int, positions: List[int], current_time: float
     ) -> Optional[List[int]]:
         """
         Process user commands and update state accordingly.
@@ -153,18 +155,18 @@ class StateHandler:
             Optional[List[int]]: New positions list or None if no change
         """
         # Handle new input command
-        if key == ord('n'):
+        if key == ord("n"):
             logger.debug("Command: new input")
             self.reset_positions()
             return []
 
         # Handle sequential reveal command
-        if key == ord('s'):
+        if key == ord("s"):
             logger.debug("Command: sequential reveal")
             self.handle_sequential_reveal(positions, current_time)
 
         # Handle reset command
-        if key == ord('r'):
+        if key == ord("r"):
             logger.debug("Command: reset")
             self.handle_reset(positions)
 
@@ -211,8 +213,9 @@ class StateHandler:
 
         # Check for changes
         if current_dimensions != self.last_known_dimensions:
-            logger.debug("Terminal resized from %s to %s",
-                        self.last_known_dimensions, current_dimensions)
+            logger.debug(
+                "Terminal resized from %s to %s", self.last_known_dimensions, current_dimensions
+            )
             self.last_known_dimensions = current_dimensions
             return True
 

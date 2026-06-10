@@ -173,3 +173,11 @@ cython_debug/
 .worktrees/
 .security-key
 logs/security/
+
+# Local-only files (never commit)
+.DS_Store
+.claude/
+config.yaml
+input.txt
+junit.xml
+uv.lock

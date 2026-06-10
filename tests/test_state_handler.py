@@ -1,9 +1,6 @@
 import curses
 import time
-import pytest
-from unittest.mock import patch
 from seedshield.state_handler import StateHandler
-from tests.test_fixtures import mock_stdscr
 
 
 def test_state_handler_init():
@@ -63,18 +60,18 @@ def test_handle_commands():
     current_time = time.time()
 
     # Test new input
-    result = handler.handle_commands(ord('n'), positions, current_time)
+    result = handler.handle_commands(ord("n"), positions, current_time)
     assert result == []
     assert handler.current_index == 0
 
     # Test sequential reveal
-    handler.handle_commands(ord('s'), positions, current_time)
+    handler.handle_commands(ord("s"), positions, current_time)
     assert handler.cursor_pos == 0
     assert handler.reveal_time is not None
 
     # Test reset
     handler.reached_last = True
-    handler.handle_commands(ord('r'), positions, current_time)
+    handler.handle_commands(ord("r"), positions, current_time)
     assert handler.current_index == 0
     assert handler.reached_last is False
 
@@ -94,13 +91,13 @@ def test_sequential_reveal():
     current_time = time.time()
 
     # First reveal
-    handler.handle_commands(ord('s'), positions, current_time)
+    handler.handle_commands(ord("s"), positions, current_time)
     assert handler.cursor_pos == 0
     assert not handler.reached_last
 
     # Last reveal
     handler.current_index = len(positions) - 1
-    handler.handle_commands(ord('s'), positions, current_time)
+    handler.handle_commands(ord("s"), positions, current_time)
     assert handler.reached_last
 
 
@@ -121,12 +118,12 @@ def test_state_handler_handle_commands_reset():
 
     # Test reset without reaching last
     handler.reached_last = False
-    result = handler.handle_commands(ord('r'), positions, current_time)
+    result = handler.handle_commands(ord("r"), positions, current_time)
     assert result is None
 
     # Test reset after reaching last
     handler.reached_last = True
-    handler.handle_commands(ord('r'), positions, current_time)
+    handler.handle_commands(ord("r"), positions, current_time)
     assert handler.current_index == 0
 
 

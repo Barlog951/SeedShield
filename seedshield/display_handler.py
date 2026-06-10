@@ -45,8 +45,13 @@ class DisplayHandler:
         logger.debug("DisplayHandler initialized with %s words", len(words))
 
     def _add_scroll_indicators(
-            self, stdscr: Any, visible_start: int, visible_end: int,
-            positions: List[int], height: int, width: int
+        self,
+        stdscr: Any,
+        visible_start: int,
+        visible_end: int,
+        positions: List[int],
+        height: int,
+        width: int,
     ) -> None:
         """
         Add scroll indicators to the display if needed.
@@ -63,8 +68,10 @@ class DisplayHandler:
         if visible_start > 0:
             try:
                 stdscr.addstr(0, max(0, width - len(SCROLL_INDICATOR_UP) - 1), SCROLL_INDICATOR_UP)
-                logger.debug("Added up scroll indicator at position 0,%s",
-                           width - len(SCROLL_INDICATOR_UP) - 1)
+                logger.debug(
+                    "Added up scroll indicator at position 0,%s",
+                    width - len(SCROLL_INDICATOR_UP) - 1,
+                )
             except curses.error:
                 pass
 
@@ -74,10 +81,13 @@ class DisplayHandler:
                 stdscr.addstr(
                     height - 7,
                     max(0, width - len(SCROLL_INDICATOR_DOWN) - 1),
-                    SCROLL_INDICATOR_DOWN
+                    SCROLL_INDICATOR_DOWN,
                 )
-                logger.debug("Added down scroll indicator at position %s,%s",
-                           height - 7, width - len(SCROLL_INDICATOR_DOWN) - 1)
+                logger.debug(
+                    "Added down scroll indicator at position %s,%s",
+                    height - 7,
+                    width - len(SCROLL_INDICATOR_DOWN) - 1,
+                )
             except curses.error:
                 pass
 
@@ -132,8 +142,9 @@ class DisplayHandler:
             except curses.error:
                 pass
 
-    def _render_word(self, stdscr: Any, word: str, display_num: int,
-                     y_pos: int, is_revealed: bool, width: int) -> None:
+    def _render_word(
+        self, stdscr: Any, word: str, display_num: int, y_pos: int, is_revealed: bool, width: int
+    ) -> None:
         """
         Render a single word with proper masking and formatting.
 
@@ -149,7 +160,7 @@ class DisplayHandler:
 
         # Ensure text fits within terminal width
         if len(display_text) >= width:
-            display_text = display_text[:width - 1]
+            display_text = display_text[: width - 1]
 
         # Highlight revealed word
         if is_revealed:
@@ -174,8 +185,12 @@ class DisplayHandler:
         return f"INVALID({pos})"
 
     def display_words(
-            self, stdscr: Any, positions: List[int], scroll_position: int,
-            cursor_pos: Optional[int], is_last_reached: bool
+        self,
+        stdscr: Any,
+        positions: List[int],
+        scroll_position: int,
+        cursor_pos: Optional[int],
+        is_last_reached: bool,
     ) -> int:
         """
         Display words with masking in the terminal interface.
@@ -206,12 +221,19 @@ class DisplayHandler:
         stdscr.clear()
 
         # Display words with proper masking
-        self._display_visible_words(stdscr, positions, visible_start, visible_end,
-                                   scroll_position, cursor_pos, height, width)
+        self._display_visible_words(
+            stdscr,
+            positions,
+            visible_start,
+            visible_end,
+            scroll_position,
+            cursor_pos,
+            height,
+            width,
+        )
 
         # Add scroll indicators if needed
-        self._add_scroll_indicators(stdscr, visible_start, visible_end, positions,
-                                  height, width)
+        self._add_scroll_indicators(stdscr, visible_start, visible_end, positions, height, width)
 
         # Add command menu
         self._add_menu(stdscr, height, is_last_reached)
@@ -221,10 +243,15 @@ class DisplayHandler:
         return result
 
     def _display_visible_words(
-            self, stdscr: Any, positions: List[int],
-            visible_start: int, visible_end: int,
-            scroll_position: int, cursor_pos: Optional[int],
-            height: int, width: int
+        self,
+        stdscr: Any,
+        positions: List[int],
+        visible_start: int,
+        visible_end: int,
+        scroll_position: int,
+        cursor_pos: Optional[int],
+        height: int,
+        width: int,
     ) -> None:
         """
         Display the visible words on the screen.
@@ -256,7 +283,7 @@ class DisplayHandler:
             except curses.error:
                 # Handle rendering errors
                 logger.debug("Error displaying word at position %s", i)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 # Handle unexpected errors
                 logger.error("Unexpected error displaying word at position %s: %s", i, str(e))
 

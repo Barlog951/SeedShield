@@ -7,10 +7,11 @@ name = "SeedShield"
 version = "0.2.3"
 readme = { file = "README.md", content-type = "text/markdown" }
 description = "Secure BIP39 word viewer with masking and reveal functionality"
+license = {text = "MIT"}
 authors = [
     {name = "Barlog951", email = "barlog951@gmail.com"}
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 dependencies = [
     "pyperclip>=1.8.0",
 ]
@@ -21,8 +22,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -48,7 +47,8 @@ test = [
 windows = ["windows-curses"]
 dev = [
     "build",
-    "twine"
+    "twine",
+    "black"
 ]
 
 [project.scripts]
@@ -67,12 +67,8 @@ disable = [
     "C0103",  # invalid-name
 ]
 
-[tool.flake8]
-max-line-length = 100
-exclude = [".git", "__pycache__", "build", "dist"]
-
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

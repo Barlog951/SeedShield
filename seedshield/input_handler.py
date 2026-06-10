@@ -102,7 +102,7 @@ class InputHandler:
             stdscr.refresh()
             time.sleep(1)
             return None
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Unexpected clipboard error: %s", str(e))
             stdscr.addstr(6, 0, "Unexpected error with clipboard")
             stdscr.refresh()
@@ -156,7 +156,7 @@ class InputHandler:
                 return None
 
             positions = []
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if not line or not line.isdigit():
@@ -168,8 +168,10 @@ class InputHandler:
                         positions.append(num)
                     else:
                         logger.warning(
-                            "Skipping out-of-range number at line %s: %s "
-                            "(valid range: 1-%s)", line_num, num, self.word_count
+                            "Skipping out-of-range number at line %s: %s " "(valid range: 1-%s)",
+                            line_num,
+                            num,
+                            self.word_count,
                         )
 
             if not positions:
@@ -183,7 +185,7 @@ class InputHandler:
         except ValueError as e:
             logger.error("Value error in positions file: %s", str(e))
             return None
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Unexpected error reading positions file: %s", str(e))
             return None
 
@@ -214,11 +216,11 @@ class InputHandler:
             Optional[List[int]]: Processed positions or None
         """
         # Handle quitting
-        if input_str == 'q':
+        if input_str == "q":
             return None
 
         # Handle clipboard input
-        if input_str == 'v':
+        if input_str == "v":
             return self.process_clipboard_input(stdscr)
 
         # Handle individual number
@@ -249,7 +251,7 @@ class InputHandler:
             curses.echo()
 
             try:
-                input_str = stdscr.getstr().decode('utf-8').strip().lower()
+                input_str = stdscr.getstr().decode("utf-8").strip().lower()
                 # Skip empty input
                 if not input_str:
                     continue
@@ -265,7 +267,7 @@ class InputHandler:
                 self._display_error(stdscr, "Invalid character input", e)
             except ValueError as e:
                 self._display_error(stdscr, "Invalid input format", e)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 self._display_error(stdscr, "Error processing input", e)
             finally:
                 curses.noecho()
