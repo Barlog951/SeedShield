@@ -1,3 +1,10 @@
+## [0.2.4](https://github.com/Barlog951/SeedShield/compare/v0.2.3...v0.2.4) (2026-06-10)
+
+
+### Bug Fixes
+
+* prevent interpreter crash (SIGBUS) in secure memory clearing on Python 3.13+ ([902219e](https://github.com/Barlog951/SeedShield/commit/902219e0a982b8eaf42f502dcd0d154bc26c235e))
+
 ## [0.2.3](https://github.com/Barlog951/SeedShield/compare/v0.2.2...v0.2.3) (2025-10-31)
 
 

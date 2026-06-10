@@ -13,7 +13,7 @@ from typing import Optional
 
 # Application constants
 APP_NAME = "SeedShield"
-VERSION = "0.2.3"
+VERSION = "0.2.4"
 
 # Security settings
 REVEAL_TIMEOUT = 3  # Seconds before auto-hiding revealed words
