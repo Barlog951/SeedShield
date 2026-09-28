@@ -1,11 +1,10 @@
 version: 2
+# Review requests come from .github/CODEOWNERS (dependabot 'reviewers' was retired)
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "Barlog951"
     labels:
       - "dependencies"
       - "python"
@@ -18,8 +17,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "Barlog951"
     labels:
       - "dependencies"
       - "docker"
@@ -31,8 +28,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "Barlog951"
     labels:
       - "dependencies"
       - "ci"

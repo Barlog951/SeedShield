@@ -27,6 +27,7 @@ branches:
           - "test (3.10)"
           - "test (3.12)"
           - "test (3.14)"
+          - "test-macos"
           - "dependency-review"
       enforce_admins: false
       restrictions:

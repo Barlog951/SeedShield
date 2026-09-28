@@ -1,4 +1,5 @@
-FROM python:3.14-slim
+# Digest-pinned for reproducible builds; Dependabot (docker) bumps it weekly
+FROM python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
