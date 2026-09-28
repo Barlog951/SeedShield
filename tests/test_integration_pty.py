@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 import time
-from typing import Callable, List
+from collections.abc import Callable
 
 import pytest
 
@@ -26,7 +26,7 @@ ROWS, COLS = 30, 100
 MENU_ROW = ROWS - 5  # "Commands:" row (0-based)
 
 with open(DEFAULT_WORDLIST_FULLPATH, encoding="utf-8") as _f:
-    WORDS: List[str] = _f.read().split()
+    WORDS: list[str] = _f.read().split()
 
 
 class TerminalSession:

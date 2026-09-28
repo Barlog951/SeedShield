@@ -8,7 +8,8 @@ and running code within a properly managed UI context.
 import curses
 import locale
 import sys
-from typing import Tuple, Callable, Any
+from typing import Any
+from collections.abc import Callable
 
 from .config import logger, console_logging_suppressed, MOUSE_MOTION_ON, MOUSE_MOTION_OFF
 
@@ -162,12 +163,12 @@ class UIManager:
         finally:
             self.stdscr = None
 
-    def update_dimensions(self) -> Tuple[int, int]:
+    def update_dimensions(self) -> tuple[int, int]:
         """
         Update stored dimensions of the terminal.
 
         Returns:
-            Tuple[int, int]: Height and width of the terminal
+            tuple[int, int]: Height and width of the terminal
         """
         self.height, self.width = self.stdscr.getmaxyx()
         return self.height, self.width

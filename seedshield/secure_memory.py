@@ -7,13 +7,13 @@ data like seed phrases from persisting in memory longer than necessary.
 
 import ctypes
 import sys
-from typing import Any, List, Optional
+from typing import Any
 import secrets
 
 from .config import logger
 
 
-def _ascii_buffer_offset(string_var: str) -> Optional[int]:
+def _ascii_buffer_offset(string_var: str) -> int | None:
     """
     Locate the inline character buffer of a CPython compact ASCII string.
 
@@ -26,7 +26,7 @@ def _ascii_buffer_offset(string_var: str) -> Optional[int]:
         string_var: String to inspect
 
     Returns:
-        Optional[int]: Buffer offset from the object address, or None if the
+        int | None: Buffer offset from the object address, or None if the
             string does not use the compact ASCII layout
     """
     if not string_var.isascii():
@@ -80,7 +80,7 @@ def secure_clear_string(string_var: str) -> None:
     # Can't actually set the parameter to None as it would only affect the local reference
 
 
-def secure_clear_list(list_var: List[Any]) -> None:
+def secure_clear_list(list_var: list[Any]) -> None:
     """
     Securely clear a list containing sensitive data.
 

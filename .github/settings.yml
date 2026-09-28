@@ -24,8 +24,6 @@ branches:
         # Must match real check names: matrix jobs report as "test (<version>)",
         # and security-scan never runs on pull requests
         contexts:
-          - "test (3.10)"
-          - "test (3.12)"
           - "test (3.14)"
           - "test-macos"
           - "dependency-review"

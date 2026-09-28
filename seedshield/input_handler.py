@@ -8,7 +8,6 @@ including keyboard, clipboard, and files.
 import curses
 import os
 import re
-from typing import List, Optional, Tuple
 
 import pyperclip  # type: ignore
 
@@ -30,7 +29,7 @@ class InputHandler:
         """
         self.word_count = word_count
 
-    def display_input_prompt(self, stdscr: "curses.window", message: Optional[str] = None) -> None:
+    def display_input_prompt(self, stdscr: curses.window, message: str | None = None) -> None:
         """
         Display input instructions and an optional feedback message.
 
@@ -50,12 +49,12 @@ class InputHandler:
         stdscr.refresh()
 
     @staticmethod
-    def read_clipboard() -> Optional[str]:
+    def read_clipboard() -> str | None:
         """
         Read the clipboard and securely clear it immediately afterwards.
 
         Returns:
-            Optional[str]: Clipboard text, or None if no clipboard is available
+            str | None: Clipboard text, or None if no clipboard is available
         """
         try:
             content = pyperclip.paste()
@@ -68,12 +67,12 @@ class InputHandler:
             logger.warning("Failed to securely clear clipboard")
         return content if isinstance(content, str) else None
 
-    def process_clipboard_input(self) -> Tuple[Optional[List[int]], Optional[str]]:
+    def process_clipboard_input(self) -> tuple[list[int] | None, str | None]:
         """
         Parse positions from the clipboard with the same rules as typed input.
 
         Returns:
-            Tuple[Optional[List[int]], Optional[str]]: Positions (None if
+            tuple[list[int] | None, str | None]: Positions (None if
                 unavailable or invalid) and a feedback message on failure
         """
         content = self.read_clipboard()
@@ -86,7 +85,7 @@ class InputHandler:
             return numbers, None
         return None, f"Clipboard must contain only positions 1-{self.word_count}"
 
-    def validate_number_input(self, input_str: str) -> Optional[List[int]]:
+    def validate_number_input(self, input_str: str) -> list[int] | None:
         """
         Validate number input from the user.
 
@@ -99,7 +98,7 @@ class InputHandler:
             input_str: String containing the user's input
 
         Returns:
-            Optional[List[int]]: List of valid position numbers,
+            list[int] | None: List of valid position numbers,
                                or None if any value is invalid
         """
         tokens = [token for token in re.split(r"[,\s]+", input_str.strip()) if token]
@@ -149,7 +148,7 @@ class InputHandler:
 
         return True
 
-    def load_positions_from_file(self, file_path: str) -> Optional[List[int]]:
+    def load_positions_from_file(self, file_path: str) -> list[int] | None:
         """
         Load position numbers from a file with security validation.
 
@@ -160,14 +159,14 @@ class InputHandler:
             file_path: Path to the file containing position numbers
 
         Returns:
-            Optional[List[int]]: List of valid position numbers, or None if
+            list[int] | None: List of valid position numbers, or None if
                 the file is unreadable or contains any invalid value
         """
         if not self._validate_readable_file(file_path):
             return None
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read(MAX_POSITIONS_FILE_SIZE + 1)
         except (OSError, UnicodeDecodeError) as e:
             logger.error("Error reading positions file: %s", str(e))
@@ -182,7 +181,7 @@ class InputHandler:
         secure_clear_string(content)
         return positions
 
-    def _process_input_command(self, input_str: str) -> Tuple[Optional[List[int]], Optional[str]]:
+    def _process_input_command(self, input_str: str) -> tuple[list[int] | None, str | None]:
         """
         Process a single input command.
 
@@ -190,7 +189,7 @@ class InputHandler:
             input_str: User input string
 
         Returns:
-            Tuple[Optional[List[int]], Optional[str]]: Positions (None means
+            tuple[list[int] | None, str | None]: Positions (None means
                 quit, an empty list means retry) and an optional feedback
                 message for the next prompt
         """
@@ -210,7 +209,7 @@ class InputHandler:
 
         return [], f"Invalid input. Enter numbers between 1-{self.word_count}"
 
-    def get_input(self, stdscr: "curses.window") -> Optional[List[int]]:
+    def get_input(self, stdscr: curses.window) -> list[int] | None:
         """
         Get user input, validating it and handling different input types.
 
@@ -221,11 +220,11 @@ class InputHandler:
             stdscr: Curses window object for terminal display
 
         Returns:
-            Optional[List[int]]: List of valid position numbers or None for quit command
+            list[int] | None: List of valid position numbers or None for quit command
         """
         # Block while the user types; the display loop restores its own timeout
         stdscr.timeout(-1)
-        message: Optional[str] = None
+        message: str | None = None
 
         while True:
             try:

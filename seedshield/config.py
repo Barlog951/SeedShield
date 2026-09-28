@@ -10,7 +10,7 @@ import logging
 import logging.handlers
 import sys
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from collections.abc import Iterator
 
 # Application constants
 APP_NAME = "SeedShield"
@@ -89,7 +89,7 @@ def console_logging_suppressed() -> Iterator[None]:
 
 
 def setup_logging(
-    log_level: int = logging.WARNING, log_file: Optional[str] = None
+    log_level: int = logging.WARNING, log_file: str | None = None
 ) -> logging.Logger:
     """
     Set up application logging with proper security measures.
@@ -132,7 +132,7 @@ def setup_logging(
             file_handler.setFormatter(file_formatter)
 
             log.addHandler(file_handler)
-        except (PermissionError, IOError, OSError):
+        except (PermissionError, OSError):
             # Fall back to console-only logging if file logging fails
             pass
 

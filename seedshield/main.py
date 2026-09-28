@@ -21,7 +21,6 @@ import os
 import logging
 import signal
 from types import FrameType
-from typing import Optional
 
 from .secure_word_interface import SecureWordInterface
 from .config import (
@@ -66,7 +65,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def validate_wordlist_path(wordlist_path: Optional[str]) -> Optional[str]:
+def validate_wordlist_path(wordlist_path: str | None) -> str | None:
     """
     Validate wordlist path and return the full path if valid.
 
@@ -74,7 +73,7 @@ def validate_wordlist_path(wordlist_path: Optional[str]) -> Optional[str]:
         wordlist_path: Path to wordlist file; None selects the bundled list
 
     Returns:
-        Optional[str]: Valid full path or None if invalid
+        str | None: Valid full path or None if invalid
     """
     # No explicit path: use the wordlist bundled with the package
     if wordlist_path is None:
@@ -96,7 +95,7 @@ def validate_wordlist_path(wordlist_path: Optional[str]) -> Optional[str]:
     return wordlist_path
 
 
-def _exit_on_signal(signum: int, _frame: Optional[FrameType]) -> None:
+def _exit_on_signal(signum: int, _frame: FrameType | None) -> None:
     """Turn a termination signal into SystemExit so cleanup (screen wipe,
     mouse reset, memory clearing) still runs in the finally blocks."""
     raise SystemExit(128 + signum)
@@ -149,7 +148,7 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, exiting cleanly")
         sys.exit(0)
-    except (ValueError, IOError, OSError) as e:
+    except (ValueError, OSError) as e:
         # Reported once via print; the log only records it (verbose file log)
         logger.debug("Error running secure word interface: %s", str(e))
         print(f"Error: {str(e)}", file=sys.stderr)

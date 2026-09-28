@@ -2,7 +2,8 @@
 
 ## Build & Test Commands
 ```bash
-# Activate virtual environment
+# Activate virtual environment (Python 3.14 is the only supported version;
+# create with: /opt/homebrew/bin/python3.14 -m venv --clear .venv)
 source .venv/bin/activate
 
 # Install dev dependencies
@@ -33,7 +34,8 @@ docker build -t seedshield:latest .
 
 ## Code Style Guidelines
 - **Imports**: Standard library first, third-party second, local modules last
-- **Type Annotations**: Use typing module (List, Optional, Tuple) for all functions
+- **Type Annotations**: Python 3.14 only - builtin generics and unions (`list[int]`, `str | None`,
+  `collections.abc.Callable`); no `typing.List/Optional/Tuple`. Annotate all functions
 - **Naming**: snake_case for functions/variables, CamelCase for classes, UPPERCASE for constants
 - **Documentation**: Docstrings for public interfaces, self-documenting code for internals
 - **Error Handling**: Specific exceptions with proper cleanup in finally blocks

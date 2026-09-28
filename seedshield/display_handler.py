@@ -7,7 +7,6 @@ ensuring proper masking and interaction.
 
 import curses
 from dataclasses import dataclass
-from typing import List, Optional
 
 from .config import logger, MASK_CHARACTER, MASK_LENGTH
 from .config import SCROLL_INDICATOR_UP, SCROLL_INDICATOR_DOWN, MENU_TEXT
@@ -39,7 +38,7 @@ class DisplayState:
     """View state for one display pass."""
 
     scroll: int
-    cursor: Optional[int]
+    cursor: int | None
     reached_last: bool
 
 
@@ -54,7 +53,7 @@ class DisplayHandler:
     - Handling terminal size changes
     """
 
-    def __init__(self, words: List[str]) -> None:
+    def __init__(self, words: list[str]) -> None:
         """
         Initialize the display handler.
 
@@ -71,7 +70,7 @@ class DisplayHandler:
         logger.debug("DisplayHandler initialized with %s words", len(words))
 
     def _add_scroll_indicators(
-        self, stdscr: "curses.window", viewport: Viewport, total: int
+        self, stdscr: curses.window, viewport: Viewport, total: int
     ) -> None:
         """
         Add scroll indicators to the display if needed.
@@ -110,7 +109,7 @@ class DisplayHandler:
             except curses.error:
                 pass
 
-    def _add_menu(self, stdscr: "curses.window", height: int, is_last_reached: bool) -> None:
+    def _add_menu(self, stdscr: curses.window, height: int, is_last_reached: bool) -> None:
         """
         Add command menu to the display.
 
@@ -133,8 +132,8 @@ class DisplayHandler:
             if len(menu_text) > self._last_width - 2:
                 # Simple word wrapping
                 words = menu_text.split()
-                line1: List[str] = []
-                line2: List[str] = []
+                line1: list[str] = []
+                line2: list[str] = []
                 current_line = line1
                 current_length = 0
 
@@ -161,7 +160,7 @@ class DisplayHandler:
             except curses.error:
                 pass
 
-    def _render_word(self, stdscr: "curses.window", row: WordRow, width: int) -> None:
+    def _render_word(self, stdscr: curses.window, row: WordRow, width: int) -> None:
         """
         Render a single word with proper masking and formatting.
 
@@ -200,7 +199,7 @@ class DisplayHandler:
         return f"INVALID({pos})"
 
     def display_words(
-        self, stdscr: "curses.window", positions: List[int], state: DisplayState
+        self, stdscr: curses.window, positions: list[int], state: DisplayState
     ) -> int:
         """
         Display words with masking in the terminal interface.
@@ -246,10 +245,10 @@ class DisplayHandler:
 
     def _display_visible_words(
         self,
-        stdscr: "curses.window",
-        positions: List[int],
+        stdscr: curses.window,
+        positions: list[int],
         viewport: Viewport,
-        cursor_pos: Optional[int],
+        cursor_pos: int | None,
     ) -> None:
         """
         Display the visible words on the screen.
@@ -295,7 +294,7 @@ class DisplayHandler:
         # Ensure at least one word is visible
         return max(1, (height - RESERVED_BOTTOM_ROWS) // ROW_SPACING)
 
-    def handle_autoscroll(self, current_pos: Optional[int], scroll_pos: int, height: int) -> int:
+    def handle_autoscroll(self, current_pos: int | None, scroll_pos: int, height: int) -> int:
         """
         Calculate new scroll position based on current cursor position.
         Implements auto-scrolling to keep the current word visible.

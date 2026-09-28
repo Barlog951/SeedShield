@@ -113,7 +113,7 @@ docker run -it --rm -v "$(pwd)/positions.txt:/positions.txt:ro" seedshield -i /p
 The image installs the package normally (no source tree) and runs as a non-root user.
 
 ### Technical Architecture
-- Python 3.10+ with type hints throughout (mypy strict on definitions)
+- Python 3.14+ with type hints throughout (mypy strict on definitions)
 - Unit tests with mocked curses plus pty-based end-to-end tests (~95% coverage)
 - Curses UI with guaranteed terminal cleanup; xterm mouse mode 1003 for hover
 - Releases are cut automatically by semantic-release from conventional commits on `main`

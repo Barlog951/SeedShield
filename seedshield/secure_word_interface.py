@@ -8,7 +8,6 @@ with masking, timed reveals, and memory safety features.
 import time
 import curses
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 from .input_handler import InputHandler
 from .display_handler import DisplayHandler, DisplayState
@@ -42,7 +41,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
     """
 
     def __init__(
-        self, wordlist_path: str = DEFAULT_WORDLIST_FULLPATH, ui_manager: Optional[UIManager] = None
+        self, wordlist_path: str = DEFAULT_WORDLIST_FULLPATH, ui_manager: UIManager | None = None
     ):
         """
         Initialize the secure word interface with handlers and configuration.
@@ -52,7 +51,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             ui_manager: Optional UI manager for terminal handling
         """
         self.ui_manager = ui_manager if ui_manager is not None else UIManager()
-        self.words: List[str] = []
+        self.words: list[str] = []
 
         # Load wordlist with proper validation
         self._load_wordlist(wordlist_path)
@@ -79,7 +78,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         logger.debug("Loading wordlist from %s", wordlist_path)
 
         try:
-            with open(wordlist_path, "r", encoding="utf-8") as f:
+            with open(wordlist_path, encoding="utf-8") as f:
                 lines = f.read().splitlines()
         except FileNotFoundError:
             logger.error("Wordlist file not found: %s", wordlist_path)
@@ -92,7 +91,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         logger.debug("Loaded %s words from wordlist", len(self.words))
 
     @staticmethod
-    def _validate_wordlist(lines: List[str]) -> List[str]:
+    def _validate_wordlist(lines: list[str]) -> list[str]:
         """
         Validate wordlist lines; a gap or duplicate would shift every position.
 
@@ -100,7 +99,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             lines: Raw lines of the wordlist file
 
         Returns:
-            List[str]: The words, one per position
+            list[str]: The words, one per position
 
         Raises:
             ValueError: If the wordlist is empty or has blank/duplicate entries
@@ -118,7 +117,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
 
         return words
 
-    def _handle_input_mode(self, stdscr: "curses.window") -> Optional[List[int]]:
+    def _handle_input_mode(self, stdscr: curses.window) -> list[int] | None:
         """
         Handle the input mode for entering word positions.
 
@@ -126,7 +125,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             stdscr: Curses window objec
 
         Returns:
-            Optional[List[int]]: List of positions or None if user quits
+            list[int] | None: List of positions or None if user quits
         """
         logger.debug("Entering input mode")
         # No mouse while typing: getstr() beeps on every mouse event
@@ -147,11 +146,11 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
 
     def _update_display_state(
         self,
-        stdscr: "curses.window",
-        positions: List[int],
+        stdscr: curses.window,
+        positions: list[int],
         scroll_position: int,
         current_time: float,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """
         Update the display based on current state.
 
@@ -162,7 +161,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             current_time: Current timestamp
 
         Returns:
-            Tuple[int, int]: Number of visible words and new scroll position
+            tuple[int, int]: Number of visible words and new scroll position
         """
         # Handle any timed auto-hiding of revealed words
         self.state_handler.handle_reveal_timeout(current_time)
@@ -193,8 +192,8 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         return visible_count, scroll_position
 
     def _process_user_input(
-        self, stdscr: "curses.window", positions: List[int], view: ViewContext
-    ) -> Tuple[bool, int]:
+        self, stdscr: curses.window, positions: list[int], view: ViewContext
+    ) -> tuple[bool, int]:
         """
         Process user input and update state accordingly.
 
@@ -204,7 +203,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             view: Current view state
 
         Returns:
-            Tuple[bool, int]: Whether to continue and new scroll position
+            tuple[bool, int]: Whether to continue and new scroll position
         """
         scroll_position = view.scroll
         try:
@@ -243,12 +242,12 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
 
         return True, scroll_position
 
-    def _handle_quit_command(self) -> Tuple[bool, bool, int, List[int]]:
+    def _handle_quit_command(self) -> tuple[bool, bool, int, list[int]]:
         """Handle the quit command."""
         logger.debug("Quit command received")
         return True, False, 0, []
 
-    def _handle_navigation(self, key: int, positions: List[int], view: ViewContext) -> int:
+    def _handle_navigation(self, key: int, positions: list[int], view: ViewContext) -> int:
         """
         Handle navigation key inputs.
 
@@ -264,8 +263,8 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         return self.state_handler.handle_navigation(key, positions, view.scroll, view.visible_count)
 
     def _handle_command_keys(
-        self, key: int, positions: List[int], view: ViewContext
-    ) -> Tuple[bool, int, List[int]]:
+        self, key: int, positions: list[int], view: ViewContext
+    ) -> tuple[bool, int, list[int]]:
         """
         Handle command keys (n, s, r).
 
@@ -275,11 +274,11 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             view: Current view state
 
         Returns:
-            Tuple[bool, int, List[int]]: Reinitialize flag, new scroll position, new positions
+            tuple[bool, int, list[int]]: Reinitialize flag, new scroll position, new positions
         """
         should_reinit = False
         new_scroll = view.scroll
-        new_positions: List[int] = []
+        new_positions: list[int] = []
 
         logger.debug("Command key received: '%s'", chr(key))
         command_result = self.state_handler.handle_commands(key, positions, view.now)
@@ -295,7 +294,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
 
         return should_reinit, new_scroll, new_positions
 
-    def _handle_mouse_event(self, positions: List[int], view: ViewContext) -> None:
+    def _handle_mouse_event(self, positions: list[int], view: ViewContext) -> None:
         """
         Handle mouse events for word revealing.
 
@@ -325,8 +324,8 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             self.state_handler.handle_mouse_reveal(visible_index, view.now)
 
     def _handle_user_input(
-        self, c: int, positions: List[int], view: ViewContext
-    ) -> Tuple[bool, bool, int, List[int]]:
+        self, c: int, positions: list[int], view: ViewContext
+    ) -> tuple[bool, bool, int, list[int]]:
         """
         Process a single user input and determine actions.
 
@@ -336,7 +335,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             view: Current view state
 
         Returns:
-            Tuple[bool, bool, int, List[int]]:
+            tuple[bool, bool, int, list[int]]:
                 Whether to quit, whether to reinitialize input mode,
                 new scroll position, and new positions (if any)
         """
@@ -344,7 +343,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         should_quit = False
         should_reinit = False
         new_scroll = view.scroll
-        new_positions: List[int] = []
+        new_positions: list[int] = []
 
         # Handle different input types
         if c in (ord("q"), ord("Q")):
@@ -362,7 +361,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         # Return all state changes
         return should_quit, should_reinit, new_scroll, new_positions
 
-    def _load_positions_file(self, file_path: str) -> List[int]:
+    def _load_positions_file(self, file_path: str) -> list[int]:
         """
         Load word positions from a file.
 
@@ -370,7 +369,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             file_path: Path to the file containing positions
 
         Returns:
-            List[int]: Loaded positions
+            list[int]: Loaded positions
 
         Raises:
             ValueError: If the file is unreadable or has no/invalid positions
@@ -386,7 +385,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
 
         return file_positions
 
-    def _main_display_loop(self, stdscr: "curses.window", positions: List[int]) -> None:
+    def _main_display_loop(self, stdscr: curses.window, positions: list[int]) -> None:
         """
         Run the main display loop for showing words and handling interaction.
 
@@ -420,7 +419,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             if not should_continue:
                 break
 
-    def run(self, positions_file: Optional[str] = None) -> None:
+    def run(self, positions_file: str | None = None) -> None:
         """
         Run the secure word interface main loop.
 
@@ -430,7 +429,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         Raises:
             Exception: If there's an error during execution
         """
-        positions: List[int] = []
+        positions: list[int] = []
 
         def run_interface() -> None:
             """Inner function to run with UI context."""

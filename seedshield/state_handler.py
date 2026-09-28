@@ -5,7 +5,6 @@ This module handles application state, user interaction, and navigation.
 """
 
 import curses
-from typing import List, Optional, Tuple
 
 from .config import logger, REVEAL_TIMEOUT
 
@@ -24,17 +23,17 @@ class StateHandler:
     def __init__(self) -> None:
         """Initialize the state handler with default state."""
         # Currently shown word index (if any)
-        self.cursor_pos: Optional[int] = None
+        self.cursor_pos: int | None = None
 
         # When was the current word revealed (for auto-hide)
-        self.reveal_time: Optional[float] = None
+        self.reveal_time: float | None = None
 
         # For sequential reveal mode
         self.current_index = 0
         self.reached_last = False
 
         # Optionally track terminal resize events
-        self.last_known_dimensions: Optional[Tuple[int, int]] = None
+        self.last_known_dimensions: tuple[int, int] | None = None
 
     def reset_positions(self) -> None:
         """Reset all state to default values."""
@@ -57,7 +56,7 @@ class StateHandler:
             self.reveal_time = None
 
     def handle_navigation(
-        self, key: int, positions: List[int], scroll_position: int, visible_count: int
+        self, key: int, positions: list[int], scroll_position: int, visible_count: int
     ) -> int:
         """
         Handle navigation (scrolling) input.
@@ -85,7 +84,7 @@ class StateHandler:
 
         return new_position
 
-    def handle_sequential_reveal(self, positions: List[int], current_time: float) -> None:
+    def handle_sequential_reveal(self, positions: list[int], current_time: float) -> None:
         """
         Handle sequential reveal ('s' command) logic.
 
@@ -109,7 +108,7 @@ class StateHandler:
             self.reached_last = True
             logger.debug("Sequential reveal: reached last word")
 
-    def handle_reset(self, positions: List[int]) -> None:
+    def handle_reset(self, positions: list[int]) -> None:
         """
         Handle reset ('r' command) logic.
 
@@ -125,8 +124,8 @@ class StateHandler:
             self.current_index = 0
 
     def handle_commands(
-        self, key: int, positions: List[int], current_time: float
-    ) -> Optional[List[int]]:
+        self, key: int, positions: list[int], current_time: float
+    ) -> list[int] | None:
         """
         Process user commands and update state accordingly.
 
@@ -136,7 +135,7 @@ class StateHandler:
             current_time: Current timestamp
 
         Returns:
-            Optional[List[int]]: New positions list or None if no change
+            list[int] | None: New positions list or None if no change
         """
         # Handle new input command
         if key == ord("n"):
@@ -168,12 +167,12 @@ class StateHandler:
         self.cursor_pos = visible_index
         self.reveal_time = current_time
 
-    def get_display_state(self) -> Tuple[Optional[int], bool]:
+    def get_display_state(self) -> tuple[int | None, bool]:
         """
         Get current display state.
 
         Returns:
-            Tuple[Optional[int], bool]: Current cursor position and whether last word was reached
+            tuple[int | None, bool]: Current cursor position and whether last word was reached
         """
         return self.cursor_pos, self.reached_last
 
