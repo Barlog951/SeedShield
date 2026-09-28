@@ -14,7 +14,7 @@ from typing import Iterator, Optional
 
 # Application constants
 APP_NAME = "SeedShield"
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 
 # Security settings
 REVEAL_TIMEOUT = 3  # Seconds before auto-hiding revealed words
