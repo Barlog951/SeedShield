@@ -1,4 +1,4 @@
-image: python:3.12-slim
+image: python:3.14-slim
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
@@ -16,7 +16,6 @@ cache:
     - .coverage
 
 before_script:
-  - apt-get update && apt-get install -y --no-install-recommends libncurses5-dev xclip
   - python -m pip install --upgrade pip
   - pip install -e ".[test]"
   - pip install build pytest-cov pylint flake8 mypy
@@ -60,9 +59,9 @@ build:package:
 
 build:docker:
   stage: docker
-  image: docker:24
+  image: docker:29
   services:
-    - docker:24-dind
+    - docker:29-dind
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:

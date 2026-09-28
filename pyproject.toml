@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64.0", "wheel", "pytest", "pyperclip>=1.8.0"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,19 +7,19 @@ name = "SeedShield"
 dynamic = ["version"]
 readme = { file = "README.md", content-type = "text/markdown" }
 description = "Secure BIP39 word viewer with masking and reveal functionality"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Barlog951", email = "barlog951@gmail.com"}
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "pyperclip>=1.8.0",
+    "pyperclip>=1.11.0",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -37,22 +37,30 @@ classifiers = [
 
 [project.optional-dependencies]
 test = [
-    "pytest>=6.0",
-    "pytest-timeout>=2.1.0",
-    "pytest-cov",
-    "pylint",
-    "flake8",
-    "mypy"
+    "pytest>=9.1",
+    "pytest-timeout>=2.4",
+    "pytest-cov>=7.1",
+    "pylint>=4.0.9",
+    "flake8>=7.4",
+    "mypy>=2.3"
 ]
-windows = ["windows-curses"]
+windows = ["windows-curses>=2.4.2"]
 dev = [
-    "build",
-    "twine",
-    "black"
+    "build>=1.6",
+    "twine>=7.0",
+    "black>=26.5"
 ]
 
 [project.scripts]
 seedshield = "seedshield.main:main"
+
+[tool.setuptools.packages.find]
+# Namespace discovery so the data/ directory ships as package data
+include = ["seedshield", "seedshield.*"]
+exclude = ["*.__pycache__"]
+
+[tool.setuptools.package-data]
+seedshield = ["data/english.txt"]
 
 [tool.setuptools.dynamic]
 # Single source of truth for the version; semantic-release updates config.py

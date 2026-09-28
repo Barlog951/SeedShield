@@ -218,13 +218,12 @@ class DisplayHandler:
         self._last_height = height
         self._last_width = width
 
-        # Calculate display metrics
-        max_display_lines = max(1, height - RESERVED_BOTTOM_ROWS)
+        # Same visible-count rule as autoscroll, so both always agree
         viewport = Viewport(
             height=height,
             width=width,
             start=state.scroll,
-            end=min(len(positions), state.scroll + max_display_lines // ROW_SPACING),
+            end=min(len(positions), state.scroll + self.calculate_visible_range(height)),
         )
 
         logger.debug("Displaying words %s-%s of %s", viewport.start, viewport.end, len(positions))

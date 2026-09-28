@@ -13,7 +13,6 @@ on:
         - staging
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -28,7 +27,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       pull-requests: write
@@ -38,15 +37,14 @@ jobs:
         # 3.10 = supported floor, 3.12 = primary, 3.14 = Docker runtime
         python-version: ['3.10', '3.12', '3.14']
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y libncurses5-dev xclip
           python -m pip install --upgrade pip
           pip install -e ".[test]"
           pip install build pytest-cov pylint flake8 mypy
@@ -73,33 +71,38 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      # codecov/test-results-action is deprecated in favor of report_type
       - name: Upload test results to Codecov
         if: ${{ !cancelled() && matrix.python-version == '3.12' }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v7
+        with:
+          report_type: test_results
+          files: ./junit.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   dependency-review:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
 
   security-scan:
     needs: test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    # Weekly schedule re-scans dependencies even when nothing was pushed
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -111,22 +114,24 @@ jobs:
 
   release:
     needs: [test, security-scan]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       pull-requests: write
       issues: write
-    if: github.ref == 'refs/heads/main'
+    # Push only: scheduled/manual runs on main must never cut a release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       new-version: ${{ steps.get_new_version.outputs.NEW_VERSION }}
+      released: ${{ steps.get_new_version.outputs.RELEASED }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 'lts/*'
 
@@ -146,6 +151,9 @@ jobs:
             git push origin v0.0.1
           fi
 
+      - name: Record latest tag before release
+        run: echo "PREVIOUS_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
+
       - name: Release
         id: semantic_release
         env:
@@ -156,26 +164,30 @@ jobs:
         id: get_new_version
         run: |
           VERSION=$(git describe --tags --abbrev=0)
-          echo "NEW_VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "NEW_VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          # Publish only when semantic-release actually created a new tag
+          if [ "$VERSION" != "$PREVIOUS_TAG" ]; then
+            echo "RELEASED=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "RELEASED=false" >> "$GITHUB_OUTPUT"
+          fi
 
   build-package:
     needs: [release, security-scan]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       id-token: write
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: needs.release.outputs.released == 'true'
     steps:
       - name: Print new version
         run: echo "Version is ${{ needs.release.outputs.new-version }}"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
           ref: "refs/tags/${{ needs.release.outputs.new-version }}"
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -186,28 +198,25 @@ jobs:
         run: python -m build
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.0
+        uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-          # Pushes to main without a new release rebuild the latest tag;
-          # re-uploading an existing version must be a no-op, not a failure
+          # Re-running a failed release job must not fail on files already uploaded
           skip-existing: true
 
   build-docker:
     needs: [release, security-scan]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: needs.release.outputs.released == 'true'
     steps:
       - name: Print new version
         run: echo "Version is ${{ needs.release.outputs.new-version }}"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
           ref: "refs/tags/${{ needs.release.outputs.new-version }}"
 
       - name: Set up QEMU
@@ -225,7 +234,7 @@ jobs:
       - name: Get version from seedshield/config.py
         run: |
           VERSION=$(grep -o 'VERSION = "[0-9.]*"' seedshield/config.py | grep -o '[0-9.]*')
-          echo "PACKAGE_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
 
       - name: Build and push
         uses: docker/build-push-action@v7
@@ -239,11 +248,12 @@ jobs:
 
   vulnerabilities-notification:
     needs: [security-scan]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       issues: write
       contents: read
-    if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
+    # Only a failed scan opens this issue; failure() would also fire on test failures
+    if: always() && needs.security-scan.result == 'failure' && (github.event_name == 'schedule' || github.event_name == 'push')
     steps:
       - name: Create Issue
         uses: actions/github-script@v9

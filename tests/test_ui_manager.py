@@ -5,6 +5,8 @@ This module provides comprehensive tests for the UIManager class methods
 to ensure proper terminal lifecycle handling and error recovery.
 """
 
+import curses
+
 import pytest
 from unittest.mock import patch, MagicMock, call
 
@@ -187,6 +189,83 @@ class TestUIManager:
 
             # Verify error was logged
             assert mock_logger.error.called
+
+    def test_enable_mouse_requests_motion_tracking(self):
+        """Hover needs xterm mode 1003; ncurses alone only enables clicks."""
+        ui = UIManager()
+        with (
+            patch("seedshield.ui_manager.curses.mousemask", return_value=(0x1FFFFFFF, 0)),
+            patch("seedshield.ui_manager.curses.mouseinterval") as mock_interval,
+            patch("seedshield.ui_manager.sys.stdout") as mock_stdout,
+        ):
+            ui._enable_mouse()
+
+        mock_interval.assert_called_once_with(0)
+        mock_stdout.write.assert_called_once_with("\033[?1003h")
+        assert ui._motion_tracking is True
+
+    def test_enable_mouse_without_mouse_support(self):
+        """No mouse support: no motion sequence is emitted."""
+        ui = UIManager()
+        with (
+            patch("seedshield.ui_manager.curses.mousemask", return_value=(0, 0)),
+            patch("seedshield.ui_manager.curses.mouseinterval"),
+            patch("seedshield.ui_manager.sys.stdout") as mock_stdout,
+        ):
+            ui._enable_mouse()
+
+        assert not mock_stdout.write.called
+        assert ui._motion_tracking is False
+
+    def test_disable_mouse_turns_off_motion_and_reports(self):
+        """Disabling stops hover tracking and clears the ncurses mouse mask."""
+        ui = UIManager()
+        ui._motion_tracking = True
+        with (
+            patch("seedshield.ui_manager.curses.mousemask", return_value=(0, 0)) as mock_mask,
+            patch("seedshield.ui_manager.sys.stdout") as mock_stdout,
+        ):
+            ui.set_mouse_enabled(False)
+
+        mock_stdout.write.assert_called_once_with("\033[?1003l")
+        mock_mask.assert_called_once_with(0)
+        assert ui._motion_tracking is False
+
+    def test_reenable_mouse_does_not_duplicate_motion_sequence(self):
+        """Enabling twice sends the motion sequence only once."""
+        ui = UIManager()
+        with (
+            patch("seedshield.ui_manager.curses.mousemask", return_value=(0x1FFFFFFF, 0)),
+            patch("seedshield.ui_manager.sys.stdout") as mock_stdout,
+        ):
+            ui.set_mouse_enabled(True)
+            ui.set_mouse_enabled(True)
+
+        mock_stdout.write.assert_called_once_with("\033[?1003h")
+
+    def test_enable_mouse_failure_is_not_fatal(self):
+        """Mouse setup errors must not abort UI initialization."""
+        ui = UIManager()
+        with patch("seedshield.ui_manager.curses.mousemask", side_effect=curses.error("no mouse")):
+            ui._enable_mouse()
+        assert ui._motion_tracking is False
+
+    def test_cleanup_disables_motion_tracking(self, mock_curses, mock_stdscr):
+        """The terminal must not keep emitting motion reports after exit."""
+        ui = UIManager()
+        ui.stdscr = mock_stdscr
+        ui._motion_tracking = True
+        with patch("seedshield.ui_manager.sys.stdout") as mock_stdout:
+            ui.cleanup()
+
+        mock_stdout.write.assert_called_once_with("\033[?1003l")
+        assert ui._motion_tracking is False
+
+    def test_write_terminal_failure(self):
+        """A closed stdout is reported as a failed write, not an exception."""
+        with patch("seedshield.ui_manager.sys.stdout") as mock_stdout:
+            mock_stdout.write.side_effect = OSError("closed")
+            assert UIManager._write_terminal("x") is False
 
     def test_update_dimensions(self, mock_stdscr):
         """Test updating dimensions."""

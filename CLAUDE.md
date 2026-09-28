@@ -25,9 +25,10 @@ python -m build
 # Docker build
 docker build -t seedshield:latest .
 
-# Release process
-git tag v0.x.y  # Create new version tag
-git push origin v0.x.y  # Push tag to trigger CI/CD
+# Release process: automatic. semantic-release runs on every push to main and
+# cuts a release from conventional commits (feat -> minor; fix/docs/refactor/
+# test/... -> patch; chore -> none). PyPI + Docker publish only when a new tag
+# was actually created. Never tag manually.
 ```
 
 ## Code Style Guidelines
@@ -59,12 +60,16 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - Proper handling of terminal resizing
   - Detailed command menu with context-sensitive options
   - Multi-position input: "5 12 19" or "5,12,19" accepted directly
+  - One all-or-nothing parser for typed, clipboard ('v') and file (-i) input
+  - Mouse: hover (xterm mode 1003, enabled in UIManager and disabled on cleanup)
+    and left click reveal; only rows actually drawn are hit-testable
   - Input feedback persists on the prompt instead of freezing the UI
   - Improved error handling for user inputs
   - Proper screen transitions between modes
 - **Security Features**: 
   - Auto-timeout mechanisms (halfdelay for TTY, timeout for non-TTY)
-  - File logging is opt-in (--verbose only); no usage trail on disk by default
+  - File logging is opt-in (--verbose only, file mode 0600); no usage trail on disk by default
+  - stderr logging is suppressed while curses owns the terminal (console_logging_suppressed)
   - User-entered values and positions are never written to logs
   - Mask/reveal functionality with secure timers
   - Secure memory handling and clipboard management
@@ -74,15 +79,17 @@ git push origin v0.x.y  # Push tag to trigger CI/CD
   - Global fixtures in conftest.py for all tests
   - Comprehensive mocking of curses functionality
   - Isolated test environment with pytest
-  - 127 tests covering all components
-  - 93% code coverage, exceeding 85% threshold
+  - 177 tests covering all components
+  - tests/test_integration_pty.py drives the real UI through a pty (POSIX only);
+    add one there for any terminal-visible behavior - mocks can't see escape sequences
+  - 96% code coverage, exceeding 85% threshold
 - **Cognitive Complexity**: Maintained ≤15 per component through clean architecture
 - **CI/CD Pipeline**: GitHub Actions for automated testing, building and publishing
 - **Docker Support**: Minimal secure image with optimized layers
 
 ## Current Project Status
-- All tests are passing (127 tests)
-- Code coverage at 93%, exceeding required threshold of 85%
+- All tests are passing (177 tests)
+- Code coverage at 96%, exceeding required threshold of 85%
 - Pylint score: 10.00/10
 - No type checking issues (mypy passes)
 - No functions with complexity over 15

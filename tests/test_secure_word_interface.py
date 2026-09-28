@@ -4,6 +4,7 @@ import sys
 import pytest
 from pytest import mark
 from unittest.mock import patch, MagicMock
+from seedshield.config import REVEAL_TIMEOUT
 from seedshield.display_handler import DisplayState
 from seedshield.secure_word_interface import SecureWordInterface, ViewContext
 
@@ -251,7 +252,7 @@ def test_scroll_interaction_with_reveal_timeout(mock_curses, mock_stdscr):
     )
     initial_scroll = scroll_position
 
-    current_time += interface.state_handler.REVEAL_TIMEOUT + 1
+    current_time += REVEAL_TIMEOUT + 1
     interface.state_handler.handle_reveal_timeout(current_time)
 
     interface.display_handler.display_words(
@@ -495,6 +496,118 @@ def test_scroll_position_persistence():
         mock_stdscr, positions, ViewContext(scroll_position, visible_count, time.time())
     )
     assert new_scroll == scroll_position
+
+
+def _mouse_reveal(interface, my, bstate, positions, view):
+    """Feed one mouse event through the handler and return the revealed index."""
+    interface.state_handler.cursor_pos = None
+    with patch("curses.getmouse", return_value=(0, 5, my, 0, bstate)):
+        interface._handle_mouse_event(positions, view)
+    return interface.state_handler.cursor_pos
+
+
+def test_mouse_click_below_drawn_rows_reveals_nothing():
+    """Regression: clicking the menu area must not reveal an off-screen word."""
+    interface = SecureWordInterface()
+    positions = list(range(1, 21))
+    view = ViewContext(scroll=0, visible_count=11, now=time.time())
+
+    # Row 25 is the menu; 25 // 2 = 12 is a real index but not drawn
+    assert _mouse_reveal(interface, 25, curses.BUTTON1_PRESSED, positions, view) is None
+    # Last drawn word (index 10 on rows 20-21) is still clickable
+    assert _mouse_reveal(interface, 21, curses.BUTTON1_PRESSED, positions, view) == 10
+
+
+def test_mouse_reveal_respects_scroll():
+    """A drawn row maps to scroll + row."""
+    interface = SecureWordInterface()
+    positions = list(range(1, 21))
+    view = ViewContext(scroll=4, visible_count=5, now=time.time())
+    assert _mouse_reveal(interface, 2, curses.BUTTON1_CLICKED, positions, view) == 5
+
+
+def test_mouse_hover_reveals_word():
+    """Motion (hover) events reveal the word under the pointer."""
+    interface = SecureWordInterface()
+    view = ViewContext(scroll=0, visible_count=3, now=time.time())
+    assert _mouse_reveal(interface, 0, curses.REPORT_MOUSE_POSITION, [1, 2, 3], view) == 0
+
+
+@pytest.mark.parametrize("bstate", [0, curses.BUTTON1_RELEASED, curses.BUTTON4_PRESSED])
+def test_mouse_ignores_non_reveal_events(bstate):
+    """Releases, wheel and unknown events never reveal words."""
+    interface = SecureWordInterface()
+    view = ViewContext(scroll=0, visible_count=3, now=time.time())
+    assert _mouse_reveal(interface, 0, bstate, [1, 2, 3], view) is None
+
+
+def test_mouse_getmouse_error_is_ignored():
+    """A failed getmouse() leaves the state untouched."""
+    interface = SecureWordInterface()
+    view = ViewContext(scroll=0, visible_count=3, now=time.time())
+    with patch("curses.getmouse", side_effect=curses.error("no event")):
+        interface._handle_mouse_event([1, 2, 3], view)
+    assert interface.state_handler.cursor_pos is None
+
+
+@pytest.mark.parametrize(
+    "content, error",
+    [
+        ("", "empty"),
+        ("\n\n", "empty"),
+        ("apple\n\nbanana\n", "blank line at line 2"),
+        ("apple\nbanana\napple\n", "duplicate"),
+    ],
+)
+def test_wordlist_validation_rejects_shifting_content(tmp_path, content, error):
+    """Regression: blank or duplicate entries would shift every position."""
+    wordlist = tmp_path / "words.txt"
+    wordlist.write_text(content)
+    with pytest.raises(ValueError, match=error):
+        SecureWordInterface(str(wordlist))
+
+
+def test_wordlist_trailing_blank_lines_allowed(tmp_path):
+    """Trailing blank lines are ignored, not counted as words."""
+    wordlist = tmp_path / "words.txt"
+    wordlist.write_text("apple\nbanana\n\n\n")
+    assert SecureWordInterface(str(wordlist)).words == ["apple", "banana"]
+
+
+def test_input_mode_disables_mouse_while_typing(mock_stdscr):
+    """The mouse is off during getstr() and restored afterwards, even on error."""
+    ui_manager = MagicMock()
+    interface = SecureWordInterface(ui_manager=ui_manager)
+
+    with patch.object(interface.input_handler, "get_input", side_effect=RuntimeError("x")):
+        with pytest.raises(RuntimeError):
+            interface._handle_input_mode(mock_stdscr)
+
+    assert ui_manager.set_mouse_enabled.call_args_list == [((False,),), ((True,),)]
+
+
+def test_uppercase_q_quits():
+    """'Q' quits in display mode just like 'q'."""
+    interface = SecureWordInterface()
+    should_quit, _, _, _ = interface._handle_user_input(
+        ord("Q"), [1, 2], ViewContext(0, 2, time.time())
+    )
+    assert should_quit is True
+
+
+def test_invalid_positions_file_fails_before_ui(tmp_path):
+    """Regression: a bad -i file must error out before curses starts, and still wipe."""
+    bad = tmp_path / "positions.txt"
+    bad.write_text("1\nabc\n")
+    ui_manager = MagicMock()
+    interface = SecureWordInterface(ui_manager=ui_manager)
+
+    with pytest.raises(ValueError, match="Invalid input file"):
+        interface.run(str(bad))
+
+    assert not ui_manager.with_ui_context.called
+    # Sensitive data is cleared even on this early failure path
+    assert interface.words == []
 
 
 def test_init_with_missing_file():

@@ -2,7 +2,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 from seedshield.main import main, validate_wordlist_path, parse_arguments
 from seedshield.ui_manager import UIManager
-from seedshield.config import DEFAULT_WORDLIST_PATH
+from seedshield.config import DEFAULT_WORDLIST_FULLPATH
 
 # Set test mode flag to enable test compatibility
 main.__TEST_MODE__ = True
@@ -123,7 +123,7 @@ def test_parse_arguments_default():
     with patch("sys.argv", ["main.py"]):
         args = parse_arguments()
 
-        assert args.wordlist == DEFAULT_WORDLIST_PATH
+        assert args.wordlist is None
         assert args.input is None
         assert not args.verbose
 
@@ -143,7 +143,7 @@ def test_parse_arguments_input():
     with patch("sys.argv", ["main.py", "--input", "positions.txt"]):
         args = parse_arguments()
 
-        assert args.wordlist == DEFAULT_WORDLIST_PATH
+        assert args.wordlist is None
         assert args.input == "positions.txt"
         assert not args.verbose
 
@@ -153,7 +153,7 @@ def test_parse_arguments_verbose():
     with patch("sys.argv", ["main.py", "--verbose"]):
         args = parse_arguments()
 
-        assert args.wordlist == DEFAULT_WORDLIST_PATH
+        assert args.wordlist is None
         assert args.input is None
         assert args.verbose
 
@@ -168,14 +168,17 @@ def test_parse_arguments_version():
 
 
 def test_validate_wordlist_path_default():
-    """Test validate_wordlist_path with default path."""
-    with (
-        patch("os.path.dirname", return_value="/app"),
-        patch("os.path.join", return_value="/app/data/english.txt"),
-    ):
-        path = validate_wordlist_path(DEFAULT_WORDLIST_PATH)
+    """No -w argument selects the bundled wordlist."""
+    assert validate_wordlist_path(None) == DEFAULT_WORDLIST_FULLPATH
 
-        assert path == "/app/data/english.txt"
+
+def test_validate_wordlist_path_explicit_english_txt_is_a_real_path(tmp_path, monkeypatch):
+    """Regression: '-w english.txt' silently used the bundled list, not the local file."""
+    monkeypatch.chdir(tmp_path)
+    assert validate_wordlist_path("english.txt") is None  # no such local file
+
+    (tmp_path / "english.txt").write_text("a\nb\n")
+    assert validate_wordlist_path("english.txt") == "english.txt"
 
 
 def test_validate_wordlist_path_custom_valid():
@@ -304,3 +307,54 @@ def test_main_keyboard_interrupt():
         # Verify logging and exit
         mock_logger.info.assert_any_call("Received keyboard interrupt, exiting cleanly")
         mock_exit.assert_called_once_with(0)
+
+
+def test_main_verbose_reports_log_path(tmp_path, monkeypatch, capsys):
+    """--verbose tells the user where the log was written."""
+    monkeypatch.chdir(tmp_path)
+    with (
+        patch("sys.argv", ["main.py", "--verbose"]),
+        patch("seedshield.main.setup_logging"),
+        patch("seedshield.main.SecureWordInterface"),
+    ):
+        main()
+
+    assert "Verbose log written to" in capsys.readouterr().err
+
+
+def test_main_invalid_positions_file_exits_with_message(tmp_path, capsys):
+    """A rejected -i file exits 1 with a readable error instead of an empty prompt."""
+    bad = tmp_path / "positions.txt"
+    bad.write_text("1 two 3\n")
+    with (
+        patch("sys.argv", ["main.py", "-i", str(bad)]),
+        patch("seedshield.main.setup_logging"),
+        pytest.raises(SystemExit) as exit_info,
+    ):
+        main()
+
+    assert exit_info.value.code == 1
+    assert "Invalid input file" in capsys.readouterr().err
+
+
+def test_termination_signal_raises_system_exit():
+    """SIGTERM/SIGHUP become SystemExit so finally-block cleanup runs."""
+    from seedshield.main import _exit_on_signal
+
+    with pytest.raises(SystemExit) as exit_info:
+        _exit_on_signal(15, None)
+    assert exit_info.value.code == 143
+
+
+def test_install_signal_handlers_registers_available_signals():
+    """Handlers are installed for the termination signals this platform has."""
+    import signal as signal_module
+
+    from seedshield.main import _exit_on_signal, install_signal_handlers
+
+    with patch("seedshield.main.signal.signal") as mock_signal:
+        install_signal_handlers()
+
+    registered = {c.args[0] for c in mock_signal.call_args_list}
+    assert signal_module.SIGTERM in registered
+    assert all(c.args[1] is _exit_on_signal for c in mock_signal.call_args_list)

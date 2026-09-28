@@ -10,7 +10,7 @@ import locale
 import sys
 from typing import Tuple, Callable, Any
 
-from .config import logger
+from .config import logger, console_logging_suppressed, MOUSE_MOTION_ON, MOUSE_MOTION_OFF
 
 
 class UIManager:
@@ -27,6 +27,7 @@ class UIManager:
         self.stdscr: Any = None
         self.height = 0
         self.width = 0
+        self._motion_tracking = False
 
     def initialize(self, mock_stdscr: Any = None) -> None:
         """
@@ -55,8 +56,7 @@ class UIManager:
 
             self.stdscr = curses.initscr()
 
-            # Enable mouse events
-            curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+            self._enable_mouse()
 
             # Set up terminal settings
             curses.noecho()
@@ -70,6 +70,59 @@ class UIManager:
             self.cleanup()
             logger.error("Failed to initialize UI: %s", str(e))
             raise
+
+    def _enable_mouse(self) -> None:
+        """Enable click and hover reporting; the mouse is optional, so failures are ignored."""
+        try:
+            # Deliver presses immediately instead of waiting to detect clicks
+            curses.mouseinterval(0)
+        except curses.error as e:
+            logger.debug("Mouse interval setup failed: %s", str(e))
+        self.set_mouse_enabled(True)
+
+    def set_mouse_enabled(self, enabled: bool) -> None:
+        """
+        Turn mouse reporting on or off.
+
+        Mouse reporting must be off on the text-input screen: getstr() beeps
+        on every mouse event, and hover tracking would send dozens per second.
+
+        Args:
+            enabled: True to report clicks and hover, False to stop all reports
+        """
+        if not enabled and self._motion_tracking:
+            self._write_terminal(MOUSE_MOTION_OFF)
+            self._motion_tracking = False
+
+        try:
+            availmask, _ = curses.mousemask(
+                curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION if enabled else 0
+            )
+        except (curses.error, TypeError, ValueError) as e:
+            logger.debug("Mouse setup failed: %s", str(e))
+            return
+
+        if enabled and availmask and not self._motion_tracking:
+            self._motion_tracking = self._write_terminal(MOUSE_MOTION_ON)
+
+    @staticmethod
+    def _write_terminal(sequence: str) -> bool:
+        """
+        Write a raw control sequence to the terminal.
+
+        Args:
+            sequence: Escape sequence to emit
+
+        Returns:
+            bool: True if the sequence was written
+        """
+        try:
+            sys.stdout.write(sequence)
+            sys.stdout.flush()
+            return True
+        except (OSError, ValueError) as e:
+            logger.debug("Terminal write failed: %s", str(e))
+            return False
 
     def _set_input_timeout(self) -> None:
         """Configure the non-blocking input timeout for the display loop."""
@@ -92,6 +145,11 @@ class UIManager:
             self.stdscr.refresh()
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug("Screen wipe during cleanup failed: %s", str(e))
+
+        if self._motion_tracking:
+            # Never leave the terminal emitting motion reports after exit
+            self._write_terminal(MOUSE_MOTION_OFF)
+            self._motion_tracking = False
 
         try:
             # Reset terminal settings
@@ -124,11 +182,12 @@ class UIManager:
         Returns:
             Any: Return value of the callback function
         """
-        try:
-            self.initialize()
-            return callback()
-        except Exception as e:
-            logger.error("Error in UI context: %s", str(e))
-            raise
-        finally:
-            self.cleanup()
+        with console_logging_suppressed():
+            try:
+                self.initialize()
+                return callback()
+            except Exception as e:
+                logger.error("Error in UI context: %s", str(e))
+                raise
+            finally:
+                self.cleanup()

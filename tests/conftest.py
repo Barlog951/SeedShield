@@ -10,6 +10,8 @@ import tempfile
 from unittest.mock import MagicMock, patch
 import curses
 
+from seedshield.config import DEFAULT_WORDLIST_FULLPATH
+
 
 # Add a fixture to mock curses for tests
 @pytest.fixture
@@ -74,10 +76,7 @@ def mock_stdscr():
 @pytest.fixture(autouse=True)
 def mock_wordlist_validation():
     """Mock wordlist validation to prevent file system access during tests."""
-    with patch(
-        "seedshield.main.validate_wordlist_path",
-        return_value="/Users/dodko/DEV/python/seedshield/seedshield/data/english.txt",
-    ):
+    with patch("seedshield.main.validate_wordlist_path", return_value=DEFAULT_WORDLIST_FULLPATH):
         yield
 
 

@@ -17,6 +17,11 @@ from .ui_manager import UIManager
 from .secure_memory import secure_clear_list
 from .config import logger, DEFAULT_WORDLIST_FULLPATH, ROW_SPACING
 
+# Mouse events that reveal a word: left press/click, or hover (motion)
+REVEAL_MOUSE_EVENTS = (
+    curses.BUTTON1_PRESSED | curses.BUTTON1_CLICKED | curses.REPORT_MOUSE_POSITION
+)
+
 
 @dataclass(frozen=True)
 class ViewContext:
@@ -69,27 +74,49 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         Raises:
             FileNotFoundError: If the wordlist file cannot be found
             IOError: If there's an error reading the wordlist file
+            ValueError: If the wordlist content is invalid
         """
         logger.debug("Loading wordlist from %s", wordlist_path)
 
         try:
             with open(wordlist_path, "r", encoding="utf-8") as f:
-                self.words = [word.strip() for word in f.readlines()]
-
-            if not self.words:
-                raise ValueError("Wordlist is empty")
-
-            logger.debug("Loaded %s words from wordlist", len(self.words))
-
+                lines = f.read().splitlines()
         except FileNotFoundError:
             logger.error("Wordlist file not found: %s", wordlist_path)
             raise
-        except IOError as e:
+        except (OSError, UnicodeDecodeError) as e:
             logger.error("Error reading wordlist file: %s", str(e))
             raise
-        except Exception as e:
-            logger.error("Unexpected error loading wordlist: %s", str(e))
-            raise
+
+        self.words = self._validate_wordlist(lines)
+        logger.debug("Loaded %s words from wordlist", len(self.words))
+
+    @staticmethod
+    def _validate_wordlist(lines: List[str]) -> List[str]:
+        """
+        Validate wordlist lines; a gap or duplicate would shift every position.
+
+        Args:
+            lines: Raw lines of the wordlist file
+
+        Returns:
+            List[str]: The words, one per position
+
+        Raises:
+            ValueError: If the wordlist is empty or has blank/duplicate entries
+        """
+        words = [line.strip() for line in lines]
+        while words and not words[-1]:
+            words.pop()
+
+        if not words:
+            raise ValueError("Wordlist is empty")
+        if "" in words:
+            raise ValueError(f"Wordlist has a blank line at line {words.index('') + 1}")
+        if len(set(words)) != len(words):
+            raise ValueError("Wordlist contains duplicate words")
+
+        return words
 
     def _handle_input_mode(self, stdscr: "curses.window") -> Optional[List[int]]:
         """
@@ -102,7 +129,12 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             Optional[List[int]]: List of positions or None if user quits
         """
         logger.debug("Entering input mode")
-        new_positions = self.input_handler.get_input(stdscr)
+        # No mouse while typing: getstr() beeps on every mouse event
+        self.ui_manager.set_mouse_enabled(False)
+        try:
+            new_positions = self.input_handler.get_input(stdscr)
+        finally:
+            self.ui_manager.set_mouse_enabled(True)
 
         if new_positions is not None:
             logger.debug("Received %s positions from input mode", len(new_positions))
@@ -267,20 +299,30 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         """
         Handle mouse events for word revealing.
 
+        Only a left press/click or hover over a word row that is actually drawn
+        reveals anything; the menu, empty rows, releases and wheel are ignored.
+
         Args:
             positions: List of positions
             view: Current view state
         """
         try:
-            mouse_event = curses.getmouse()
-            _, _, my, _, _ = mouse_event
-            visible_index = my // ROW_SPACING + view.scroll
-
-            if 0 <= visible_index < len(positions):
-                logger.debug("Mouse reveal at index %s", visible_index)
-                self.state_handler.handle_mouse_reveal(visible_index, view.now)
-        except Exception as e:  # pylint: disable=broad-exception-caught
+            _, _, my, _, bstate = curses.getmouse()
+        except curses.error as e:
             logger.debug("Error handling mouse event: %s", str(e))
+            return
+
+        if not bstate & REVEAL_MOUSE_EVENTS:
+            return
+
+        row = my // ROW_SPACING
+        if not 0 <= row < view.visible_count:
+            return
+
+        visible_index = row + view.scroll
+        if visible_index < len(positions):
+            logger.debug("Mouse reveal at index %s", visible_index)
+            self.state_handler.handle_mouse_reveal(visible_index, view.now)
 
     def _handle_user_input(
         self, c: int, positions: List[int], view: ViewContext
@@ -305,7 +347,7 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         new_positions: List[int] = []
 
         # Handle different input types
-        if c == ord("q"):
+        if c in (ord("q"), ord("Q")):
             should_quit, should_reinit, new_scroll, new_positions = self._handle_quit_command()
 
         elif c in (curses.KEY_UP, curses.KEY_DOWN):
@@ -328,28 +370,21 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
             file_path: Path to the file containing positions
 
         Returns:
-            List[int]: Loaded positions or empty list if no valid positions
+            List[int]: Loaded positions
 
         Raises:
-            FileNotFoundError: If the file doesn't exist
-            IOError: If there's an I/O error with the file
-            ValueError: If the file contains invalid data
+            ValueError: If the file is unreadable or has no/invalid positions
         """
-        try:
-            logger.debug("Loading positions from file: %s", file_path)
-            file_positions = self.input_handler.load_positions_from_file(file_path)
+        logger.debug("Loading positions from file")
+        file_positions = self.input_handler.load_positions_from_file(file_path)
 
-            if not file_positions:
-                logger.warning("No valid positions found in input file")
-                return []
+        if not file_positions:
+            raise ValueError(
+                "Invalid input file: expected a readable UTF-8 text file with only "
+                f"positions 1-{len(self.words)} separated by spaces, commas or newlines"
+            )
 
-            return file_positions
-        except (FileNotFoundError, IOError, ValueError) as e:
-            logger.error("Error loading positions file: %s", str(e))
-            raise
-        except Exception as e:
-            logger.error("Unexpected error loading positions file: %s", str(e))
-            raise ValueError(f"Error processing positions file: {str(e)}") from e
+        return file_positions
 
     def _main_display_loop(self, stdscr: "curses.window", positions: List[int]) -> None:
         """
@@ -395,24 +430,22 @@ class SecureWordInterface:  # pylint: disable=too-few-public-methods
         Raises:
             Exception: If there's an error during execution
         """
+        positions: List[int] = []
 
         def run_interface() -> None:
             """Inner function to run with UI context."""
-            positions: List[int] = []
+            self._main_display_loop(self.ui_manager.stdscr, positions)
 
-            # Load positions from file if provided
+        try:
+            # Validate the file before touching the terminal so errors are
+            # reported cleanly on stderr
             if positions_file:
                 positions = self._load_positions_file(positions_file)
 
-            try:
-                # Run the main application loop
-                self._main_display_loop(self.ui_manager.stdscr, positions)
-            finally:
-                # Securely clear sensitive data
-                logger.debug("Securely clearing sensitive data")
-                secure_clear_list(self.words)
-                secure_clear_list(positions)
-
-        # Run the interface with proper UI context management
-        logger.debug("Starting secure word interface")
-        self.ui_manager.with_ui_context(run_interface)
+            logger.debug("Starting secure word interface")
+            self.ui_manager.with_ui_context(run_interface)
+        finally:
+            # Securely clear sensitive data on every exit path
+            logger.debug("Securely clearing sensitive data")
+            secure_clear_list(self.words)
+            secure_clear_list(positions)

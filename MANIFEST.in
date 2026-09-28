@@ -1,3 +1,2 @@
-include pre_build.py
 include seedshield/data/english.txt
 include tests/*

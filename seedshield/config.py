@@ -9,7 +9,8 @@ import os
 import logging
 import logging.handlers
 import sys
-from typing import Optional
+from contextlib import contextmanager
+from typing import Iterator, Optional
 
 # Application constants
 APP_NAME = "SeedShield"
@@ -21,6 +22,7 @@ MASK_CHARACTER = "*"
 MASK_LENGTH = 5
 LOG_MAX_SIZE = 1024 * 1024  # 1MB
 LOG_BACKUP_COUNT = 3
+MAX_POSITIONS_FILE_SIZE = 64 * 1024  # characters; a seed needs at most 24 positions
 
 # Default paths
 DEFAULT_WORDLIST_PATH = "english.txt"
@@ -42,6 +44,48 @@ RESERVED_BOTTOM_ROWS = 7  # rows kept free for the menu and scroll indicators
 MENU_OFFSET = 5  # menu starts this many rows above the bottom
 INPUT_PROMPT_ROW = 5  # row of the "> " prompt on the input screen
 INPUT_MESSAGE_ROW = 6  # row used for input-screen feedback messages
+
+# xterm private mode 1003 ("any event" tracking): ncurses only enables click
+# reporting, so hover (motion) events must be requested explicitly
+MOUSE_MOTION_ON = "\033[?1003h"
+MOUSE_MOTION_OFF = "\033[?1003l"
+
+
+CONSOLE_HANDLER_NAME = "console"
+
+
+class PrivateRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """Rotating log handler whose files are readable by the owner only (0600)."""
+
+    def _open(self):  # type: ignore[no-untyped-def]
+        fd = os.open(self.baseFilename, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        if hasattr(os, "fchmod"):
+            # Tighten files that already existed with looser permissions
+            os.fchmod(fd, 0o600)
+        return open(fd, "a", encoding=self.encoding, errors=self.errors)
+
+
+@contextmanager
+def console_logging_suppressed() -> Iterator[None]:
+    """
+    Silence stderr logging while curses owns the terminal.
+
+    Anything written to stderr during the TUI would be drawn over the
+    interface; errors are reported by main() after the terminal is restored.
+    """
+    handlers = [
+        handler
+        for handler in logging.getLogger(APP_NAME).handlers
+        if handler.get_name() == CONSOLE_HANDLER_NAME
+    ]
+    levels = [handler.level for handler in handlers]
+    for handler in handlers:
+        handler.setLevel(logging.CRITICAL + 1)
+    try:
+        yield
+    finally:
+        for handler, level in zip(handlers, levels):
+            handler.setLevel(level)
 
 
 def setup_logging(
@@ -70,6 +114,7 @@ def setup_logging(
 
     # Console handler for error messages only
     console_handler = logging.StreamHandler(sys.stderr)
+    console_handler.set_name(CONSOLE_HANDLER_NAME)
     console_handler.setLevel(logging.ERROR)
     console_formatter = logging.Formatter("%(levelname)s: %(message)s")
     console_handler.setFormatter(console_formatter)
@@ -77,7 +122,7 @@ def setup_logging(
     # File handler with rotation, only when explicitly requested
     if log_file is not None:
         try:
-            file_handler = logging.handlers.RotatingFileHandler(
+            file_handler = PrivateRotatingFileHandler(
                 log_file, maxBytes=LOG_MAX_SIZE, backupCount=LOG_BACKUP_COUNT
             )
             file_handler.setLevel(log_level)

@@ -1,170 +1,140 @@
 # SeedShield
 
-A secure BIP39 seed phrase viewer with enterprise-grade security features, designed for safe interaction with cryptocurrency seed phrases. SeedShield emphasizes security and usability while maintaining zero data persistence.
+A terminal viewer for BIP39 seed phrases that keeps every word masked until you deliberately
+reveal it. You enter word *positions* (1-2048); SeedShield shows the matching words from the
+BIP39 wordlist one at a time, and masks each one again after 3 seconds.
 
 ## Key Features
 
-### Security-First Design
-- Zero data persistence - all operations occur in volatile memory
-- Secure memory handling with automatic cleanup and sanitization
-- Advanced masking system with consistent pattern length
-- Timed reveal system with 3-second auto-mask
-- Intelligent clipboard management with automatic clearing
-- Comprehensive input validation and sanitization
-- Anti-keylogging protection via mouse-based interaction
-- Secure error handling with proper cleanup
-- TTY/non-TTY mode handling for secure input
-- Adaptive timeout mechanisms
+### Security
+- All words masked by default; a revealed word auto-masks after 3 seconds
+- Only one word is visible at a time
+- No log file by default; nothing about your session is written to disk (`--verbose` is opt-in
+  and writes an owner-only `seedshield.log`)
+- Entered positions are never logged, even in verbose mode
+- Clipboard is cleared immediately after it is read
+- Screen is wiped before the terminal is restored, and the alternate screen is used, so revealed
+  words don't remain in scrollback
+- Best-effort memory clearing on exit (see [Limitations](#limitations))
+- Strict input validation: a set of positions is either fully valid or rejected, so words are
+  never silently skipped
 
 ### User Interface
-- Interactive word reveal with hover functionality
-- Sequential phrase revelation mode
-- Multi-source input support (file/clipboard)
-- Responsive terminal interface
-- Cross-platform support (Windows/Linux/MacOS)
-- Dynamic scrolling for long word lists
-- Clear command feedback
+- Enter several positions at once: `5 12 19` or `5,12,19`
+- Sequential reveal mode (`s`)
+- Mouse: hover over or click a word to reveal it
+- Input from keyboard, clipboard or a file
+- Scrolling for long lists; handles terminal resizing
+- Linux and macOS; Windows via the optional `windows-curses` extra (not covered by CI)
 
 ## Security Guidelines
 
 ### Operating Environment
 - Use an air-gapped computer whenever possible
-- Run on a secure, clean operating system
-  - Recommended: Live Linux distribution
-  - Avoid shared or public computers
-- Maintain physical security awareness
-  - Check for surveillance devices
-  - Use privacy screens when necessary
-- Implement proper memory management
-  - Clear system RAM after usage
-  - Utilize secure memory wiping tools
+- Prefer a clean, live Linux system; avoid shared or public computers
+- Mind your surroundings: cameras, reflections, people looking over your shoulder
+- Remember that a positions file on disk **is your seed**. Prefer typing positions, and securely
+  delete any file you created.
 
-### Usage Best Practices
+### Limitations
+SeedShield is a Python program, so it can only *reduce* how long secrets stay in memory. It
+cannot guarantee this:
+- It overwrites the wordlist strings (which include every revealed word), the typed input and
+  the clipboard text after use.
+- Python integers (the positions), intermediate string copies and curses' own screen buffers
+  cannot be wiped reliably.
+- Positions are typed on the keyboard, so SeedShield offers no protection against keyloggers
+  or a compromised machine.
 
-#### Input Management
-1. Prefer clipboard input for multiple words (use 'v' command)
-2. Clipboard contents are automatically cleared after use
-3. Double-check word positions before revelation
-4. All input is automatically validated and sanitized
-5. Invalid inputs are safely rejected
-
-#### Word Revelation Protocol
-1. Use sequential reveal mode ('s' command) for systematic checking
-2. Utilize mouse hover for temporary word exposure
-3. Allow auto-masking timer to complete
-4. One word visible at a time for maximum security
-5. Use scroll navigation for longer lists
+Treat SeedShield as one layer of a careful process, not as a guarantee.
 
 ## Installation
 
 ```bash
-# Install via pip
+# From PyPI
 pip install seedshield
 
-# Install with development dependencies
-pip install -e ".[test]"
+# On Windows
+pip install "seedshield[windows]"
 
-# Using Docker
-docker run -it --rm seedshield
-docker run -it --rm -v $(pwd)/input.txt:/input.txt seedshield -i /input.txt
+# Docker (clipboard input is unavailable inside a container)
+docker run -it --rm barlog951/seedshield
 ```
 
-## Usage Guide
+## Usage
 
-### Basic Commands
 ```bash
-# Start interactive mode
+# Interactive mode
 seedshield
 
-# Use custom wordlist
+# Load positions from a file (spaces, commas or newlines between positions)
+seedshield -i positions.txt
+
+# Use a custom wordlist (must have no blank lines or duplicates)
 seedshield -w custom_words.txt
 
-# Load from positions file
-seedshield -i positions.txt
+# Opt-in debug log (seedshield.log in the current directory, mode 0600)
+seedshield --verbose
 ```
 
-### Interactive Controls
-- `v` - Import and validate clipboard data
-- `n` - New input mode
-- `s` - Sequential reveal mode
-- `r` - Reset current sequence
-- `q` - Safe exit with cleanup
-- Mouse hover - Temporary reveal (3s timeout)
-- ↑↓ Arrow keys - Scroll through lists
+### Input screen
+- Type one or more positions and press Enter: `5`, `5 12 19` or `5,12,19`
+- `v` + Enter: read positions from the clipboard (same format), then clear the clipboard
+- `q` + Enter: quit
+
+### Viewing screen
+- `s` - reveal the next word (sequential mode)
+- `r` - restart the sequence (shown after the last word)
+- `n` - enter new positions
+- `q` - quit, wiping the screen
+- ↑↓ - scroll
+- Mouse hover or click - reveal that word for 3 seconds
 
 ## Development
 
-### Getting Started
 ```bash
-# Clone repository
-git clone https://github.com/Barlog951/SeedShield.git
-
-# Setup development environment
-cd seedshield
-pip install -e ".[test]"
-
-# Run test suite
-pytest
-```
-
-### Docker Build
-
-#### Building from Source
-```bash
-# Clone the repository
 git clone https://github.com/Barlog951/SeedShield.git
 cd SeedShield
+pip install -e ".[test]"
 
-# Build local image
-chmod +x build.sh
-./build.sh
+# Unit tests plus end-to-end tests that drive the real UI through a pty
+pytest
 
-# Test run
-docker run -it --rm seedshield --help
-
-# Run with mounted input file
-docker run -it --rm -v $(pwd)/input.txt:/input.txt seedshield -i /input.txt
-
-# Run interactive mode
-docker run -it --rm seedshield
+# Quality checks
+pylint seedshield && flake8 seedshield && mypy seedshield
 ```
-Note: Built image contains minimal dependencies and runs as non-root user for security.
+
+### Docker build
+```bash
+./build.sh                       # builds seedshield:<version> and seedshield:latest
+docker run -it --rm seedshield   # interactive
+docker run -it --rm -v "$(pwd)/positions.txt:/positions.txt:ro" seedshield -i /positions.txt
+```
+The image installs the package normally (no source tree) and runs as a non-root user.
 
 ### Technical Architecture
-- Python 3.6+ with type hints throughout the codebase
-- Comprehensive test suite (73% coverage) with security-focused tests
-- Platform-agnostic clipboard handling for cross-platform compatibility
-- Curses-based terminal interface with proper initialization and cleanup
-- Fully modular design with clean component separation
-- Adaptive handling for TTY and non-TTY environments
-- Secure memory operations with explicit cleanup
+- Python 3.10+ with type hints throughout (mypy strict on definitions)
+- Unit tests with mocked curses plus pty-based end-to-end tests (~95% coverage)
+- Curses UI with guaranteed terminal cleanup; xterm mouse mode 1003 for hover
+- Releases are cut automatically by semantic-release from conventional commits on `main`
 
 ### Code Organization
-- `main.py` - Entry point and argument handling
-- `secure_word_interface.py` - Core interface coordination
-- `input_handler.py` - Secure input processing and validation
-- `display_handler.py` - UI rendering and masking
-- `state_handler.py` - State management and security timeouts
-- `ui_manager.py` - Terminal UI abstraction layer
-- `secure_memory.py` - Secure memory handling functions
-- `config.py` - Configuration settings and constants
-- `tests/` - Comprehensive test suite
-- `data/` - Default wordlists
-
-## Security Philosophy
-SeedShield implements a defense-in-depth approach:
-- Multiple independent security layers
-- Fail-secure design principles
-- Memory-safe operations
-- Input validation at all levels
-- Automatic security timeout mechanisms
-- No data persistence
-- Secure error handling
+- `main.py` - entry point and argument handling
+- `secure_word_interface.py` - coordinates input, display and state
+- `input_handler.py` - parses and validates positions (keyboard, clipboard, file)
+- `display_handler.py` - rendering and masking
+- `state_handler.py` - reveal state, navigation and timeouts
+- `ui_manager.py` - curses lifecycle, mouse setup and cleanup
+- `secure_memory.py` - best-effort memory and clipboard clearing
+- `config.py` - settings, constants and logging
+- `data/english.txt` - bundled BIP39 English wordlist
 
 ## Legal Notice
 
 ### Disclaimer
-SeedShield provides secure seed phrase verification capabilities but should be used as part of a comprehensive security strategy. Users are responsible for implementing appropriate system-level security measures. While SeedShield incorporates robust security features, it should not be relied upon as a sole security measure.
+SeedShield helps you view seed words more safely, but it cannot secure the machine it runs on.
+You are responsible for your operating environment. Do not rely on SeedShield as your only
+security measure.
 
 ### License
 Released under the MIT License. See the LICENSE file for complete terms.

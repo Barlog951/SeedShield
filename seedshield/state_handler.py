@@ -6,21 +6,8 @@ This module handles application state, user interaction, and navigation.
 
 import curses
 from typing import List, Optional, Tuple
-from enum import Enum
 
 from .config import logger, REVEAL_TIMEOUT
-
-
-class UserCommand(Enum):
-    """Enumeration of recognized user commands."""
-
-    QUIT = "q"
-    NEW_INPUT = "n"
-    SEQUENTIAL_REVEAL = "s"
-    RESET = "r"
-    UP = "KEY_UP"
-    DOWN = "KEY_DOWN"
-    MOUSE = "MOUSE"
 
 
 class StateHandler:
@@ -33,9 +20,6 @@ class StateHandler:
     - Managing sequential reveal mode
     - Implementing auto-hide timeout functionality
     """
-
-    # For backward compatibility with tests
-    REVEAL_TIMEOUT = REVEAL_TIMEOUT
 
     def __init__(self) -> None:
         """Initialize the state handler with default state."""

@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 from seedshield.display_handler import DisplayHandler, DisplayState, Viewport
 
@@ -76,3 +78,14 @@ def test_scroll_position_limits(mock_stdscr):
     # Test scroll boundaries
     assert handler.handle_autoscroll(0, 0, 10) == 0  # Lower bound
     assert handler.handle_autoscroll(5, 5, 10) == 5  # Upper bound
+
+
+@pytest.mark.parametrize("height", [1, 5, 8, 9])
+def test_tiny_terminal_shows_at_least_one_word(height):
+    """Regression: on <=8-row terminals zero words were drawn while scrolling ran on."""
+    handler = DisplayHandler(["alpha", "beta", "gamma"])
+    stdscr = MagicMock()
+    stdscr.getmaxyx.return_value = (height, 80)
+
+    visible = handler.display_words(stdscr, [1, 2, 3], DisplayState(0, None, False))
+    assert visible == handler.calculate_visible_range(height) >= 1

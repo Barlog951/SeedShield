@@ -19,13 +19,15 @@ import sys
 import argparse
 import os
 import logging
+import signal
+from types import FrameType
 from typing import Optional
 
 from .secure_word_interface import SecureWordInterface
 from .config import (
     logger,
     setup_logging,
-    DEFAULT_WORDLIST_PATH,
+    DEFAULT_WORDLIST_FULLPATH,
     DEFAULT_LOG_PATH,
     APP_NAME,
     VERSION,
@@ -45,10 +47,14 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-w",
         "--wordlist",
-        default=DEFAULT_WORDLIST_PATH,
-        help=f"Path to wordlist file (default: {DEFAULT_WORDLIST_PATH})",
+        default=None,
+        help="Path to wordlist file (default: bundled BIP39 English wordlist)",
     )
-    parser.add_argument("-i", "--input", help="Input file with positions")
+    parser.add_argument(
+        "-i",
+        "--input",
+        help="Input file with positions separated by spaces, commas or newlines",
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -60,19 +66,19 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def validate_wordlist_path(wordlist_path: str) -> Optional[str]:
+def validate_wordlist_path(wordlist_path: Optional[str]) -> Optional[str]:
     """
     Validate wordlist path and return the full path if valid.
 
     Args:
-        wordlist_path: Path to wordlist file
+        wordlist_path: Path to wordlist file; None selects the bundled list
 
     Returns:
         Optional[str]: Valid full path or None if invalid
     """
-    # If default path, use the one bundled with the package
-    if wordlist_path == DEFAULT_WORDLIST_PATH:
-        return os.path.join(os.path.dirname(__file__), "data", DEFAULT_WORDLIST_PATH)
+    # No explicit path: use the wordlist bundled with the package
+    if wordlist_path is None:
+        return DEFAULT_WORDLIST_FULLPATH
 
     # Otherwise validate the provided path
     if not os.path.exists(wordlist_path):
@@ -90,6 +96,19 @@ def validate_wordlist_path(wordlist_path: str) -> Optional[str]:
     return wordlist_path
 
 
+def _exit_on_signal(signum: int, _frame: Optional[FrameType]) -> None:
+    """Turn a termination signal into SystemExit so cleanup (screen wipe,
+    mouse reset, memory clearing) still runs in the finally blocks."""
+    raise SystemExit(128 + signum)
+
+
+def install_signal_handlers() -> None:
+    """Route SIGTERM/SIGHUP (terminal closed) through normal cleanup."""
+    for name in ("SIGTERM", "SIGHUP"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), _exit_on_signal)
+
+
 def main() -> None:
     """
     Main entry point with argument parsing and security setup.
@@ -99,6 +118,7 @@ def main() -> None:
     """
     # Parse command line arguments
     args = parse_arguments()
+    install_signal_handlers()
 
     # File logging only when explicitly requested; no usage trail otherwise
     if args.verbose:
@@ -130,13 +150,17 @@ def main() -> None:
         logger.info("Received keyboard interrupt, exiting cleanly")
         sys.exit(0)
     except (ValueError, IOError, OSError) as e:
-        logger.error("Error running secure word interface: %s", str(e))
+        # Reported once via print; the log only records it (verbose file log)
+        logger.debug("Error running secure word interface: %s", str(e))
         print(f"Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Unexpected error: %s", str(e))
+        logger.debug("Unexpected error: %s", str(e))
         print(f"Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
+    finally:
+        if args.verbose:
+            print(f"Verbose log written to {os.path.abspath(DEFAULT_LOG_PATH)}", file=sys.stderr)
 
 
 if __name__ == "__main__":

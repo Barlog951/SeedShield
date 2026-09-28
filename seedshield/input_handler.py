@@ -12,8 +12,8 @@ from typing import List, Optional, Tuple
 
 import pyperclip  # type: ignore
 
-from .config import logger, INPUT_PROMPT_ROW, INPUT_MESSAGE_ROW
-from .secure_memory import secure_clipboard_clear
+from .config import logger, INPUT_PROMPT_ROW, INPUT_MESSAGE_ROW, MAX_POSITIONS_FILE_SIZE
+from .secure_memory import secure_clear_string, secure_clipboard_clear
 
 
 class InputHandler:
@@ -49,49 +49,51 @@ class InputHandler:
         stdscr.addstr(INPUT_PROMPT_ROW, 0, "> ")
         stdscr.refresh()
 
-    def process_clipboard_input(self) -> Optional[List[int]]:
+    @staticmethod
+    def read_clipboard() -> Optional[str]:
         """
-        Process and validate input from the clipboard.
-
-        The clipboard is securely cleared immediately after reading.
+        Read the clipboard and securely clear it immediately afterwards.
 
         Returns:
-            Optional[List[int]]: List of valid position numbers, or None if
-                no valid numbers were found
+            Optional[str]: Clipboard text, or None if no clipboard is available
         """
         try:
             content = pyperclip.paste()
-            numbers = []
-
-            # Process each line in the clipboard content
-            for line in content.splitlines():
-                try:
-                    num = int(line.strip())
-                    if 1 <= num <= self.word_count:
-                        numbers.append(num)
-                except ValueError:
-                    continue
-
-            # Securely clear the clipboard
-            if not secure_clipboard_clear():
-                logger.warning("Failed to securely clear clipboard")
-
-            return numbers or None
-
-        except (pyperclip.PyperclipException, ValueError) as e:
-            logger.error("Error processing clipboard: %s", str(e))
-            return None
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Unexpected clipboard error: %s", str(e))
+            # PyperclipException when no copy/paste mechanism exists (e.g. Docker)
+            logger.debug("Clipboard unavailable: %s", str(e))
             return None
+
+        if not secure_clipboard_clear():
+            logger.warning("Failed to securely clear clipboard")
+        return content if isinstance(content, str) else None
+
+    def process_clipboard_input(self) -> Tuple[Optional[List[int]], Optional[str]]:
+        """
+        Parse positions from the clipboard with the same rules as typed input.
+
+        Returns:
+            Tuple[Optional[List[int]], Optional[str]]: Positions (None if
+                unavailable or invalid) and a feedback message on failure
+        """
+        content = self.read_clipboard()
+        if content is None:
+            return None, "Clipboard is not available on this system"
+
+        numbers = self.validate_number_input(content)
+        secure_clear_string(content)
+        if numbers:
+            return numbers, None
+        return None, f"Clipboard must contain only positions 1-{self.word_count}"
 
     def validate_number_input(self, input_str: str) -> Optional[List[int]]:
         """
         Validate number input from the user.
 
-        Accepts one or more positions separated by spaces and/or commas
-        (e.g. "5", "5 12 19", "5,12,19"). All values must be valid for
-        the input to be accepted.
+        Accepts one or more positions separated by spaces, commas and/or
+        newlines (e.g. "5", "5 12 19", "5,12,19"). All values must be valid
+        for the input to be accepted. This is the single parser for typed,
+        clipboard and file input.
 
         Args:
             input_str: String containing the user's input
@@ -106,12 +108,13 @@ class InputHandler:
 
         positions = []
         for token in tokens:
-            # Never log the entered values: positions encode the seed
-            try:
-                num = int(token)
-            except ValueError:
+            # Never log the entered values: positions encode the seed.
+            # ASCII digits only: int() alone would accept "1_2", "+5" or "٣"
+            if not (token.isascii() and token.isdigit()):
                 logger.debug("Invalid non-integer input")
                 return None
+
+            num = int(token)
 
             if not 1 <= num <= self.word_count:
                 logger.debug("Input number out of valid range (1-%s)", self.word_count)
@@ -150,49 +153,34 @@ class InputHandler:
         """
         Load position numbers from a file with security validation.
 
+        Uses the same all-or-nothing rules as typed input, so a file is never
+        partially accepted (which could silently skip words).
+
         Args:
             file_path: Path to the file containing position numbers
 
         Returns:
-            Optional[List[int]]: List of valid position numbers or None if error
+            Optional[List[int]]: List of valid position numbers, or None if
+                the file is unreadable or contains any invalid value
         """
         if not self._validate_readable_file(file_path):
             return None
 
         try:
-            positions = []
             with open(file_path, "r", encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
-                    # Never log line contents or values: positions encode the seed
-                    if not line or not line.isdigit():
-                        logger.warning("Skipping invalid content at line %s", line_num)
-                        continue
-
-                    num = int(line)
-                    if 1 <= num <= self.word_count:
-                        positions.append(num)
-                    else:
-                        logger.warning(
-                            "Skipping out-of-range number at line %s (valid range: 1-%s)",
-                            line_num,
-                            self.word_count,
-                        )
-
-            if not positions:
-                logger.warning("No valid position numbers found in file: %s", file_path)
-
-            return positions
-
-        except IOError as e:
-            logger.error("I/O error reading positions file: %s", str(e))
+                content = f.read(MAX_POSITIONS_FILE_SIZE + 1)
+        except (OSError, UnicodeDecodeError) as e:
+            logger.error("Error reading positions file: %s", str(e))
             return None
-        except ValueError as e:
-            logger.error("Value error in positions file: %s", str(e))
+
+        if len(content) > MAX_POSITIONS_FILE_SIZE:
+            logger.error("Positions file is too large")
             return None
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Unexpected error reading positions file: %s", str(e))
-            return None
+
+        # Never log the contents: positions encode the seed
+        positions = self.validate_number_input(content)
+        secure_clear_string(content)
+        return positions
 
     def _process_input_command(self, input_str: str) -> Tuple[Optional[List[int]], Optional[str]]:
         """
@@ -212,10 +200,8 @@ class InputHandler:
 
         # Handle clipboard input
         if input_str == "v":
-            numbers = self.process_clipboard_input()
-            if numbers:
-                return numbers, None
-            return [], "No valid numbers found in clipboard"
+            numbers, message = self.process_clipboard_input()
+            return (numbers, None) if numbers else ([], message)
 
         # Handle one or more numbers
         validated_input = self.validate_number_input(input_str)
@@ -256,6 +242,8 @@ class InputHandler:
                     continue
 
                 result, message = self._process_input_command(input_str)
+                # Best effort: the typed positions are the secret
+                secure_clear_string(input_str)
                 # None means quit, empty list means retry with feedback shown
                 if result is None:
                     return None

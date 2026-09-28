@@ -5,23 +5,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1
 
-# Create non-root user, install dependencies, and cleanup in a single layer
+# Non-root user; the base image already ships the ncurses runtime and
+# terminfo. No clipboard tooling: a container has no display to paste from.
 RUN groupadd -r seedshield && \
-    useradd -r -g seedshield seedshield && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libncurses5-dev \
-    xclip && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    useradd -r -g seedshield seedshield
+
+# Regular (non-editable) install; the source tree is discarded afterwards
+COPY pyproject.toml README.md LICENSE MANIFEST.in /tmp/src/
+COPY seedshield /tmp/src/seedshield/
+RUN pip install --no-cache-dir /tmp/src && \
+    rm -rf /tmp/src && \
+    mkdir /app && chown seedshield:seedshield /app
 
 WORKDIR /app
-
-# Copy and install package in one layer
-COPY setup.py pyproject.toml README.md ./
-COPY seedshield seedshield/
-RUN pip install --no-cache-dir -e . && \
-    chown -R seedshield:seedshield /app
-
 USER seedshield
 ENTRYPOINT ["seedshield"]

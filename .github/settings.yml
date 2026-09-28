@@ -21,9 +21,12 @@ branches:
         require_code_owner_reviews: true
       required_status_checks:
         strict: true
+        # Must match real check names: matrix jobs report as "test (<version>)",
+        # and security-scan never runs on pull requests
         contexts:
-          - "test"
-          - "security-scan"
+          - "test (3.10)"
+          - "test (3.12)"
+          - "test (3.14)"
           - "dependency-review"
       enforce_admins: false
       restrictions:
