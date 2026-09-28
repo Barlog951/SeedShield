@@ -60,15 +60,23 @@ class TerminalSession:
         import select  # pylint: disable=import-outside-toplevel
 
         deadline = time.time() + timeout
+        eof = False
         while time.time() < deadline:
             if predicate(self.text()):
                 return True
+            if eof:
+                # The pty can report EOF before the exited child is reaped,
+                # so keep re-checking the predicate instead of giving up
+                time.sleep(0.05)
+                continue
             ready, _, _ = select.select([self.master], [], [], 0.05)
             if ready:
                 try:
-                    self.output.extend(os.read(self.master, 65536))
+                    data = os.read(self.master, 65536)
                 except OSError:
-                    break
+                    data = b""
+                eof = not data
+                self.output.extend(data)
         return predicate(self.text())
 
     def text(self, since: int = 0) -> str:
