@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/Barlog951/SeedShield/compare/v0.3.0...v0.4.0) (2026-09-28)
+
+
+### Features
+
+* working mouse hover, unified input parsing, CI and dependency upgrades ([e8332c4](https://github.com/Barlog951/SeedShield/commit/e8332c4d40d17f034462b2157ef1094c446acdd2))
+
 # [0.3.0](https://github.com/Barlog951/SeedShield/compare/v0.2.4...v0.3.0) (2026-06-10)
 
 
