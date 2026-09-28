@@ -197,10 +197,10 @@ jobs:
       - name: Build package
         run: python -m build
 
+      # Trusted publishing (OIDC via id-token: write); no stored PyPI token
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
           # Re-running a failed release job must not fail on files already uploaded
           skip-existing: true
 
