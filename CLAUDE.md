@@ -30,6 +30,9 @@ docker build -t seedshield:latest .
 # cuts a release from conventional commits (feat -> minor; fix/docs/refactor/
 # test/... -> patch; chore -> none). PyPI + Docker publish only when a new tag
 # was actually created. Never tag manually.
+# Traps: ANY message containing the word "dependencies" releases a patch
+# (.releaserc message rule), and a line starting with "BREAKING" releases 1.0.0.
+# For docs/CI-only changes use chore(docs): / chore(ci): without that word.
 ```
 
 ## Code Style Guidelines
@@ -84,31 +87,20 @@ docker build -t seedshield:latest .
   - 177 tests covering all components
   - tests/test_integration_pty.py drives the real UI through a pty (POSIX only);
     add one there for any terminal-visible behavior - mocks can't see escape sequences
-  - 96% code coverage, exceeding 85% threshold
+  - 95% code coverage, exceeding 85% threshold
 - **Cognitive Complexity**: Maintained ≤15 per component through clean architecture
-- **CI/CD Pipeline**: GitHub Actions for automated testing, building and publishing
+- **CI/CD Pipeline** (GitHub Actions, `.github/workflows/ci.yml`):
+  - Tests on Linux and macOS (Python 3.14), security scan (also weekly), semantic-release
+  - PyPI via Trusted Publishing (OIDC, no stored token); release uses the built-in GITHUB_TOKEN
+  - Actions pinned to commit SHAs and the Docker base image to a digest; Dependabot bumps both
+  - Publishing jobs run only when a release was actually created
 - **Docker Support**: Minimal secure image with optimized layers
 
 ## Current Project Status
-- All tests are passing (177 tests)
-- Code coverage at 96%, exceeding required threshold of 85%
-- Pylint score: 10.00/10
-- No type checking issues (mypy passes)
-- No functions with complexity over 15
-- UI improvements:
-  - Clean interface with no text blocking the first line
-  - Fixed 'n' key to properly return to input mode
-  - Fixed initial screen to avoid premature error messages
-  - Proper handling of empty input
-- CI/CD pipeline configured with GitHub Actions
-- Package building and PyPI publishing automated
-- Test fixtures properly configured with pytest conftest.py
-- TTY/non-TTY handling works correctly
-- The application correctly finds wordlists in both default and custom locations
-- Path handling is portable across different systems
-- Security features are fully functional
-- Running with pip install -e ".[test]" works correctly
-- Code is regularly refactored to maintain complexity limits
+- Python 3.14 only (`requires-python >=3.14`); older Pythons resolve to 0.4.1 on PyPI
+- 177 tests passing (unit + pty end-to-end), 95% coverage (CI gate: 85%)
+- Pylint 10.00/10, flake8 and mypy clean, no function with McCabe complexity over 15
+- Packaging is pyproject-only (no setup.py); version single-sourced in `seedshield/config.py`
 
 ## Static Analysis Tools
 ```bash
