@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/Barlog951/SeedShield/compare/v0.4.1...v0.5.0) (2026-09-28)
+
+
+### Features
+
+* target Python 3.14 only ([59284cd](https://github.com/Barlog951/SeedShield/commit/59284cddcfb6fb5cdc75183e5f76f289342b72b2))
+
 ## [0.4.1](https://github.com/Barlog951/SeedShield/compare/v0.4.0...v0.4.1) (2026-09-28)
 
 # [0.4.0](https://github.com/Barlog951/SeedShield/compare/v0.3.0...v0.4.0) (2026-09-28)
